@@ -1,0 +1,642 @@
+MULTI-SHOP E-COMMERCE PLATFORM
+Product Vision, Features, and Technical Blueprint
+Version 1.2
+
+
+============================================================
+1. PROJECT OVERVIEW
+============================================================
+
+
+Build a general-purpose platform that allows many independent businesses to create and manage their own online shops using one shared website system.
+
+
+IMPORTANT: This is NOT a single marketplace page where products from every seller are mixed together. It is one platform with separate shop routes/storefronts. Each shop has its own products, branding, settings, customers, and orders. A customer browsing one shop should see only that shop's products unless they intentionally navigate to another shop.
+
+
+Example URLs:
+- mystores.com.ng/techworld
+- mystores.com.ng/oudpalace
+- mystores.com.ng/gamezone
+- mystores.com.ng/fashionhub
+
+
+The platform owner manages the overall system, while each seller manages only their own shop.
+
+
+Brand name: MyStores
+Domain: mystores.com.ng (confirm availability, and consider also registering mystores.ng).
+
+
+============================================================
+2. CORE PRODUCT PRINCIPLE
+============================================================
+
+
+ONE PLATFORM, MANY INDEPENDENT SHOPS.
+
+
+- Every seller gets a unique shop page/route.
+- Each shop has its own product catalogue.
+- Products from separate shops must not be mixed into another shop's storefront.
+- Each seller has a private dashboard.
+- Seller A must not be able to view, edit, delete, or manage Seller B's products, orders, customer records, or settings.
+- The platform administrator can manage all shops and enforce platform rules.
+- Customers can visit a specific shop directly using its URL.
+- The system should support many different business types, not only one product category.
+- The platform may have a main landing page that explains the service and helps people find shops, but it should not automatically combine every shop's products into one shared product feed.
+
+
+============================================================
+3. BUSINESSES AND PRODUCTS SUPPORTED
+============================================================
+
+
+The platform should be suitable for almost any lawful business selling permitted goods or services, with categories configurable by the administrator.
+
+
+Examples include:
+- Phones and smartphones
+- Laptops and computers
+- Phone cases, chargers, cables, and accessories
+- Gaming consoles, games, and lawful gaming-related products or services
+- Perfumes, oud, bakhoor, and fragrance products
+- Hair oils, hair-care products, and cosmetics
+- Creams, skincare, and beauty products
+- Dresses, clothing, shoes, bags, and fashion accessories
+- Groceries, food products, and household supplies
+- Furniture, home décor, and appliances
+- Books, stationery, and educational materials
+- Sports equipment and other permitted products
+
+
+Do not hard-code the website for electronics, fashion, beauty, or any single category. Shop owners should be able to select a suitable category and enter their own product details.
+
+
+The platform must still prohibit products and services that are illegal or disallowed by applicable law or platform policy.
+
+
+============================================================
+4. CUSTOMER EXPERIENCE
+============================================================
+
+
+A customer should be able to:
+
+
+1. Open a shop's unique URL.
+2. See that shop's logo, name, banner, description, contact information, and product catalogue.
+3. Browse and search products within that shop.
+4. Filter or sort the shop's products by relevant fields such as category, price, newest, or availability.
+5. Open a product page with images, price, description, variants, and stock status.
+6. Contact the shop through configured contact options, such as WhatsApp, if enabled.
+7. Place an order through the website if online checkout is enabled.
+8. View order confirmation and relevant order details.
+9. Return to the same shop without being unexpectedly redirected to another seller's products.
+
+
+Each shop should feel like its own independent online store even though it runs on the same underlying platform.
+
+
+Optional future feature:
+- A directory page listing participating shops. The directory may show shop cards and categories, but it should not merge all sellers' product catalogues into a single product feed by default.
+
+
+============================================================
+5. SELLER REGISTRATION AND ONBOARDING
+============================================================
+
+
+Provide a “Become a Seller” or “Create Your Shop” flow.
+
+
+Suggested steps:
+1. Seller creates an account with email/phone and password or another supported authentication method.
+2. Seller verifies their account as required.
+3. Seller enters shop name, unique shop URL/slug, business category, description, logo, banner, contact details, and location if relevant.
+4. Seller accepts platform terms and applicable selling rules.
+5. The platform checks that the shop URL is available.
+6. The shop is created as active or pending approval, depending on administrator settings.
+7. The seller enters their dashboard and begins adding products.
+
+
+Shop URLs must be unique. Prevent two sellers from claiming the same shop slug.
+
+
+============================================================
+6. SELLER DASHBOARD
+============================================================
+
+
+Each seller should have a private dashboard showing only their own shop information.
+
+
+Recommended dashboard sections:
+- Overview
+- Shop profile and appearance
+- Products
+- Add product
+- Product categories
+- Inventory/stock
+- Orders
+- Customers (only customers associated with that seller's shop and subject to privacy rules)
+- Sales reports, if enabled
+- Contact and checkout settings
+- Subscription/billing
+- Account settings
+- Help/support
+
+
+The seller should be able to:
+- Create, edit, publish, unpublish, and delete their own products.
+- Upload multiple product images.
+- Update prices, stock quantities, descriptions, and availability.
+- Mark products as drafts if they are not ready to publish.
+- Manage orders belonging to their own shop.
+- Update their shop logo, banner, colours, description, and contact information.
+- Preview the shop before publishing changes.
+
+
+The seller must not be able to change another seller's records by modifying a URL or sending a direct database request.
+
+
+============================================================
+7. PRODUCT UPLOAD FORM
+============================================================
+
+
+The “Add Product” form should support fields such as:
+
+
+Required or commonly used:
+- Product name
+- Product category
+- Price
+- Product description
+- At least one product image, if image upload is required by the platform
+- Availability/status
+
+
+Optional fields:
+- Compare-at/original price
+- Stock quantity
+- SKU or seller's internal product code
+- Multiple images
+- Product variants such as size, colour, capacity, scent, or volume
+- Brand
+- Weight or dimensions
+- Delivery/pickup information
+- Product tags
+- Warranty/return information
+- Discount or sale status
+
+
+The form should be flexible enough for different types of goods. Not every product category needs the same fields.
+
+
+Upload flow:
+1. Seller opens “Add Product.”
+2. Seller enters product details and selects images from their phone or computer.
+3. Images upload to secure image storage.
+4. Product metadata is saved to the database with the authenticated seller's ID and shop ID.
+5. The product is saved as a draft or published, depending on the seller's action and moderation settings.
+6. The product appears only in the correct shop's catalogue.
+
+
+Show useful validation messages for missing fields, invalid prices, unsupported image types, oversized files, and insufficient permissions.
+
+
+============================================================
+8. SEPARATE SHOP STOREFRONTS
+============================================================
+
+
+Every shop should have its own storefront page, generated from its shop profile and products.
+
+
+Example:
+- /techworld: phones, laptops, accessories, and products listed by TechWorld only.
+- /oudpalace: oud, perfumes, and fragrance products listed by Oud Palace only.
+- /gamezone: permitted gaming products listed by GameZone only.
+- /fashionhub: clothes, shoes, and accessories listed by FashionHub only.
+
+
+Storefront elements:
+- Shop logo and banner
+- Shop name and description
+- Shop-specific navigation/categories
+- Search within this shop
+- Product grid/list
+- Product details
+- Contact or WhatsApp button, if enabled
+- Cart/checkout for this shop, if enabled
+- Shop policies and delivery information
+- Shop-specific social links, if provided
+
+
+When a visitor opens /oudpalace, all product queries must be scoped to Oud Palace's shop ID. Do not fetch and display products from TechWorld or GameZone on that page.
+
+
+Use a reliable unique shop slug and/or shop ID to resolve the storefront. Do not rely on a seller-provided display name alone to enforce data separation.
+
+
+============================================================
+9. ORDERS, CUSTOMERS, AND CHECKOUT
+============================================================
+
+
+The platform can launch in stages.
+
+
+Stage A: Contact-based ordering
+- Customer views products on a shop page.
+- Customer contacts that shop through WhatsApp, phone, or another configured method.
+- Each shop's contact information must remain separate.
+
+
+Stage B: Website checkout
+- Customer places an order through the shop's website.
+- Each order stores the correct shop ID and seller ID.
+- Sellers see only their own orders.
+- Order statuses may include pending, confirmed, processing, dispatched, completed, and cancelled.
+- Payment integration should use a reputable payment provider supported in the target market.
+- Payment secrets and private credentials must never be exposed in frontend code.
+- If a marketplace payment flow collects money centrally and later pays sellers, implement the payment provider's supported split-payment or transfer process and appropriate reconciliation.
+- Do not mark an order as paid based only on a frontend success screen. Verify payment status securely on the server/provider side.
+
+
+For the initial release, consider enabling one shop per checkout/order. This keeps orders, delivery, refunds, and seller responsibilities separate. Cross-shop carts can be considered later if there is a clear business need.
+
+
+============================================================
+10. PLATFORM ADMINISTRATOR DASHBOARD
+============================================================
+
+
+The platform owner/admin needs a separate, protected admin area.
+
+
+Recommended features:
+- View and search all shops
+- Approve, suspend, or reactivate shops
+- View shop status and subscription status
+- Manage permitted product categories
+- Review reported shops or products
+- Set platform-wide limits and policies
+- Configure subscription plans and pricing
+- View system usage and high-level reports
+- Manage support requests
+- Configure product moderation requirements
+- Manage platform announcements and maintenance settings
+
+
+Administrative privileges must be enforced by trusted backend/security rules, not merely by hiding buttons in the interface.
+
+
+============================================================
+11. MONETIZATION
+============================================================
+
+
+Possible revenue models:
+
+
+A. Monthly subscription
+- Example starting price: ₦2,000 per shop per month.
+- This is a proposed price, not a guarantee that it covers platform costs.
+- Consider a free trial or limited free plan to attract early sellers.
+
+
+B. Tiered plans
+- Basic: core storefront and a limited product count.
+- Standard: higher product limits and more shop customisation.
+- Premium: custom domain, advanced analytics, and additional features.
+
+
+C. Optional paid extras
+- Custom domain setup
+- Featured shop placement in the shop directory
+- Premium themes
+- Additional storage or product limits
+- Enhanced analytics
+
+
+D. Optional transaction fee
+- If website checkout is offered, a clearly disclosed transaction fee may be possible, subject to payment-provider terms and applicable laws.
+
+
+Explain all fees clearly before a seller subscribes. Track subscription status and provide a grace period or clear process for expired subscriptions.
+
+
+============================================================
+12. OPTIONAL CUSTOM DOMAINS
+============================================================
+
+
+Initially, shops can use platform subpaths:
+- mystores.com.ng/techworld
+- mystores.com.ng/oudpalace
+
+
+Later, offer custom domains as a premium feature:
+- techworld.example
+- oudpalace.example
+
+
+Custom domains require domain ownership verification, DNS configuration, HTTPS certificates, and a secure mapping from the domain to the correct shop. Do not promise custom-domain support until the hosting and routing setup supports it.
+
+
+============================================================
+13. SUGGESTED TECHNICAL ARCHITECTURE USING FIREBASE
+============================================================
+
+
+The existing idea can be implemented using Firebase and a suitable web frontend.
+
+
+Possible components:
+- Frontend: React, Next.js, or another suitable web framework.
+- Firebase Authentication: seller and administrator authentication.
+- Cloud Firestore: shops, products, orders, subscriptions, and settings.
+- Cloud Storage for Firebase: product images, shop logos, and banners.
+- Firebase App Hosting or another compatible hosting service: website deployment.
+- Cloud Functions or a trusted server/backend: privileged operations, payment verification, subscription processing, and other server-side tasks.
+- Firebase Security Rules: data access enforcement.
+
+
+Suggested Firestore collections:
+
+
+shops/{shopId}
+- ownerUid
+- name
+- slug
+- category
+- description
+- logoUrl
+- bannerUrl
+- contactDetails
+- status
+- subscriptionPlan
+- createdAt
+- updatedAt
+
+
+shops/{shopId}/products/{productId}
+- shopId
+- sellerUid
+- name
+- description
+- category
+- price
+- currency
+- imageUrls
+- stockQuantity
+- variants
+- status
+- createdAt
+- updatedAt
+
+
+shops/{shopId}/orders/{orderId}
+- shopId
+- sellerUid
+- customer details needed to fulfil the order
+- items belonging to that shop
+- totals
+- payment status
+- order status
+- delivery details
+- createdAt
+- updatedAt
+
+
+The exact data model may be adjusted as the implementation develops. Avoid duplicating sensitive customer information unnecessarily.
+
+
+============================================================
+14. SECURITY AND DATA ISOLATION — CRITICAL
+============================================================
+
+
+Shop separation is a core requirement, not just a visual design choice.
+
+
+Implement and test the following:
+- Every shop has a stable unique shop ID.
+- Every product is associated with the correct shop ID and owner.
+- Every order is associated with the shop that owns it.
+- Authenticated sellers can read and write only permitted records belonging to their own shop.
+- Sellers cannot change owner IDs or shop IDs to take over another seller's records.
+- Sellers cannot access another shop's orders, customers, private settings, or subscription data.
+- Product and order queries are scoped to the correct shop.
+- Admin access is restricted to authorised administrator accounts.
+- Validate prices, stock, image uploads, and status transitions.
+- Apply sensible file type and size limits to image uploads.
+- Protect personal information and follow relevant privacy requirements.
+- Never rely only on frontend checks for security.
+- Test Firebase Security Rules using multiple test seller accounts, including attempts to access another seller's data.
+- Use server-side verification for payments and privileged changes.
+- Keep secrets, API keys that must remain private, and payment credentials out of public frontend code.
+
+
+A seller should never gain access to another shop simply by editing a URL, changing a request, or changing a field in the browser.
+
+
+============================================================
+15. DESIGN AND USER EXPERIENCE
+============================================================
+
+
+Design goals:
+- Modern, professional, responsive, and mobile-friendly.
+- Works well on Android phones, iPhones, tablets, and desktop browsers.
+- Simple enough for small business owners who are not technically skilled.
+- Fast product browsing and compressed/optimised images.
+- Accessible text sizes, clear buttons, useful error messages, and straightforward navigation.
+- Consistent platform design while allowing each shop some individual branding.
+- A seller should be able to upload a product from a phone without needing technical knowledge.
+
+
+Important screens:
+1. Platform landing page
+2. Shop directory (optional, for discovering shops)
+3. Individual shop storefront
+4. Product details page
+5. Seller registration/login
+6. Shop setup wizard
+7. Seller dashboard
+8. Add/edit product page
+9. Seller order management
+10. Subscription/billing page
+11. Admin dashboard
+12. Help/support page
+
+
+The platform landing page must not accidentally become a mixed product marketplace. Its main purpose is to explain the service and/or help visitors choose a shop. If a product discovery feature is added later, it must be an intentional feature rather than the default storefront behaviour.
+
+
+============================================================
+16. DEVELOPMENT ROADMAP
+============================================================
+
+
+Phase 1 — Foundation
+- Choose platform name and domain.
+- Create the responsive frontend.
+- Configure Firebase project and environments.
+- Implement authentication and roles.
+- Define shops and unique shop slugs.
+
+
+Phase 2 — Independent storefronts
+- Create shop setup flow.
+- Build shop profile editor.
+- Implement shop-specific routes.
+- Build product catalogue and product details.
+- Ensure every storefront shows only its own products.
+
+
+Phase 3 — Seller product management
+- Build add/edit/delete product features.
+- Upload and display product images.
+- Add stock, category, and product status.
+- Test seller ownership and access controls.
+
+
+Phase 4 — Orders
+- Start with WhatsApp/contact ordering or implement website checkout.
+- Add shop-specific order management.
+- If payments are enabled, integrate and verify a suitable payment provider.
+- Add clear cancellation, refund, and delivery processes.
+
+
+Phase 5 — Admin and monetization
+- Build protected admin dashboard.
+- Add shop approval/moderation.
+- Implement subscriptions and billing.
+- Add product limits and plan-based features.
+
+
+Phase 6 — Testing and launch
+- Test on mobile and desktop.
+- Test two or more seller accounts for strict data separation.
+- Test invalid URLs, unauthorised requests, uploads, and order flows.
+- Review privacy, platform policies, backups, monitoring, and costs.
+- Launch with a small number of pilot sellers before scaling.
+
+
+Phase 7 — Growth
+- Add analytics, premium themes, custom domains, and optional advanced features.
+- Optimise hosting and image storage as usage grows.
+- Monitor costs and performance before expanding to hundreds or thousands of shops.
+
+
+============================================================
+17. ACCEPTANCE CRITERIA
+============================================================
+
+
+The first version is not ready until all the following are true:
+
+
+1. A seller can register and create a uniquely addressed shop.
+2. A seller can upload product images and details from a phone or computer.
+3. The product appears in that seller's shop only.
+4. A visitor opening another shop does not see those products.
+5. Seller A cannot read, edit, or delete Seller B's products.
+6. Seller A cannot access Seller B's orders or private shop data.
+7. The admin can manage shops through a protected admin area.
+8. The layout supports different lawful business types without requiring a separate codebase for each type.
+9. Shop routes remain unique and work after page refresh.
+10. All access restrictions are enforced in backend/database security rules, not only in the interface.
+11. The website works on common mobile and desktop screen sizes.
+12. The platform can grow to more shops without creating a separate website deployment for every seller.
+13. Opening a shop first shows a branded entry banner (about 2 seconds, skippable) before the storefront appears.
+14. Each storefront shows a Recommended carousel directly under the shop name, followed by the full product catalogue.
+15. Two sellers cannot claim the same shop address, even if they submit at the same moment.
+16. A suspended or unapproved shop's page is not publicly viewable.
+
+
+============================================================
+18. FINAL PRODUCT SUMMARY
+============================================================
+
+
+Build one multi-tenant e-commerce platform that hosts independent online shops.
+
+
+It should not force every seller's products into one shared catalogue. Each seller gets their own shop URL, product catalogue, dashboard, settings, and orders. The platform owner operates the central service, manages accounts and policies, and may earn revenue through subscriptions or optional paid features.
+
+
+The system should support a wide range of lawful business categories and be built with security, privacy, mobile usability, and future growth in mind.
+
+
+============================================================
+19. VERSION 1.1 ADDITIONS
+============================================================
+
+These items were added after reviewing the clickable preview.
+
+19.1 Shop entry banner
+- When a visitor opens a shop URL, a full-screen banner in the shop's colour shows the shop logo initial, name, category and address for about 2 seconds, then fades into the storefront.
+- Visitors can tap the banner to skip it.
+- It plays on direct links and when arriving from the platform directory. It does not replay when going back from a product page to the shop.
+- Optional later: let sellers upload a banner image or switch the entry banner off.
+
+19.2 Recommended carousel
+- Placed directly under the shop name/banner, above search and the product grid.
+- Style: stacked, centre-mode 3D perspective card slider. The centre card is full size; cards on either side tilt back, shrink and fade.
+- Advances automatically about every 3 seconds. Pauses while the visitor hovers over it or focuses it with the keyboard. Auto-advance is disabled when the visitor's device requests reduced motion.
+- Previous/next buttons and an "n of N" counter. Tapping a side card brings it to the centre; tapping the centre card opens the product.
+- Shows up to 5 in-stock products marked "Recommended" by the seller. If the seller has marked none, fall back to the first in-stock published products. Hide the carousel if fewer than 2 products qualify.
+
+19.3 Storefront layout order
+1. Address bar showing mystores.com.ng/shopname
+2. Banner with logo, name, description and WhatsApp number
+3. Recommended carousel
+4. "All products" heading, then search, sort and category filters
+5. Product grid (all published products of this shop only)
+
+19.4 Shop address checker
+- The landing page includes a field where a would-be seller types a shop address and instantly sees "available" or "taken".
+- Addresses use 3-24 characters: lowercase letters, numbers and hyphens.
+- Reserved addresses that no shop can claim: admin, dashboard, home, login, signup, api, shops, help, support, terms, privacy.
+
+19.5 Seller controls added
+- "Recommend this product" tick box on the Add/Edit Product form (limit 5 recommended at a time).
+- Product status: draft or published. Only published products appear publicly.
+- Seller can change order status: pending, confirmed, processing, dispatched, completed, cancelled.
+
+19.6 Admin controls added
+- Shop status: pending, active, suspended. Approve, suspend and reactivate buttons.
+- A suspended or pending shop shows a "This shop is unavailable" page to visitors.
+
+19.7 Data model changes
+- New collection slugs/{slug}: { shopId, ownerUid }. The shop address is the document ID, which guarantees uniqueness. A shop and its slug are created together in one batched write, and security rules reject the shop if the slug already exists.
+- shops: add themeColor, whatsappNumber, status (pending | active | suspended).
+- products: add featured (boolean), status (draft | published), stockQuantity (whole number, 0 or more).
+- Prices are stored in whole Naira and displayed with the Naira sign.
+- Orders are created only by trusted server code (Cloud Function), never directly by the browser.
+
+19.8 Technical decisions
+- Frontend: Next.js (App Router) with TypeScript. Backend services: Firebase Authentication, Cloud Firestore, Cloud Storage for Firebase.
+- Roles: sellers are ordinary signed-in users who own a shop; the administrator is a user with a custom claim admin = true, set by a trusted script.
+- Storefront pages are rendered per request and read only that shop's data by shop ID.
+- Security rules are written and tested with the Firebase emulator using at least two seller accounts before any feature is considered done.
+- One shop per order in the first release.
+
+19.9 Build order update
+Phase 1 now covers: project scaffold, Firebase config, security rules for shops, slugs, products, orders and image uploads, a rules test suite, the landing page with address checker, shop storefront with entry banner and Recommended carousel, and a product page with WhatsApp ordering.
+Next: seller sign-up and shop setup wizard, seller dashboard with product upload, admin area, orders.
+
+============================================================
+20. WORKSPACE AND NAMING
+============================================================
+
+- Brand: MyStores. Target market: Nigeria. Currency: Naira.
+- Project folder: mystores/ (lowercase, hyphens for any multi-word names).
+- Docs live in mystores/docs/: this blueprint and the clickable preview.
+- Environments: one Firebase project for development and one for production. Never test with real customer data.
+
+END OF DOCUMENT

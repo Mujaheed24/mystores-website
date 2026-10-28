@@ -1,0 +1,86 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isAdmin() { return signedIn() && request.auth.token.admin == true; }
+    function shopDoc(shopId) { return get(/databases/$(database)/documents/shops/$(shopId)); }
+    function ownsShop(shopId) { return signedIn() && shopDoc(shopId).data.ownerUid == request.auth.uid; }
+    // Keep in sync with src/lib/slug.ts
+    function validSlug(s) {
+      return s is string && s.matches('^[a-z0-9-]{3,24}$')
+        && !(s in ['admin','dashboard','home','login','signup','api','shops','help','support','terms','privacy']);
+    }
+
+    // ---- Shop addresses: the document ID is the address, so it can only exist once.
+    match /slugs/{slug} {
+      allow read: if true;
+      allow create: if signedIn()
+        && validSlug(slug)
+        && request.resource.data.keys().hasOnly(['shopId', 'ownerUid'])
+        && request.resource.data.ownerUid == request.auth.uid
+        && getAfter(/databases/$(database)/documents/shops/$(request.resource.data.shopId)).data.slug == slug
+        && getAfter(/databases/$(database)/documents/shops/$(request.resource.data.shopId)).data.ownerUid == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    match /shops/{shopId} {
+      // Visitors see active shops only. Owners and admins also see their pending/suspended shops.
+      allow read: if resource.data.status == 'active'
+        || (signedIn() && resource.data.ownerUid == request.auth.uid)
+        || isAdmin();
+
+      // New shops start as pending, must own their slug, and cannot pick a plan.
+      allow create: if signedIn()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.subscriptionPlan == 'basic'
+        && validSlug(request.resource.data.slug)
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 60
+        && existsAfter(/databases/$(database)/documents/slugs/$(request.resource.data.slug))
+        && getAfter(/databases/$(database)/documents/slugs/$(request.resource.data.slug)).data.shopId == shopId;
+
+      // Owners may edit profile fields only. Ownership, address, status and plan are locked.
+      allow update: if isAdmin()
+        || (signedIn() && resource.data.ownerUid == request.auth.uid
+            && request.resource.data.ownerUid == resource.data.ownerUid
+            && request.resource.data.slug == resource.data.slug
+            && request.resource.data.status == resource.data.status
+            && request.resource.data.subscriptionPlan == resource.data.subscriptionPlan);
+      allow delete: if isAdmin();
+
+      match /products/{productId} {
+        function validProduct(d) {
+          return d.shopId == shopId
+            && d.sellerUid == request.auth.uid
+            && d.name is string && d.name.size() > 0 && d.name.size() <= 120
+            && d.price is number && d.price >= 0 && d.price <= 1000000000
+            && d.stockQuantity is int && d.stockQuantity >= 0
+            && d.status in ['draft', 'published']
+            && d.featured is bool;
+        }
+        // Visitors: published products of active shops. Owner/admin: everything in their shop.
+        allow read: if (resource.data.status == 'published' && shopDoc(shopId).data.status == 'active')
+          || ownsShop(shopId) || isAdmin();
+        allow create: if ownsShop(shopId) && validProduct(request.resource.data);
+        allow update: if ownsShop(shopId) && validProduct(request.resource.data)
+          && request.resource.data.shopId == resource.data.shopId
+          && request.resource.data.sellerUid == resource.data.sellerUid;
+        allow delete: if ownsShop(shopId) || isAdmin();
+      }
+
+      // Orders are created by trusted server code only (Cloud Function). Sellers read and update their own.
+      match /orders/{orderId} {
+        allow read: if ownsShop(shopId) || isAdmin();
+        allow create: if false;
+        allow update: if ownsShop(shopId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['orderStatus', 'updatedAt'])
+          && request.resource.data.orderStatus in ['pending','confirmed','processing','dispatched','completed','cancelled'];
+        allow delete: if false;
+      }
+    }
+
+    match /{document=**} { allow read, write: if false; }
+  }
+}

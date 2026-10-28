@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MyStores – preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f4f6f7;--surface:#fff;--ink:#16222b;--muted:#5d6b75;--line:#d9e0e4;--brand:#0c6b58;--brand-ink:#fff;--warn:#b42318;--ok:#067647;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f161b;--surface:#18222a;--ink:#e8eef2;--muted:#9aa9b4;--line:#2b3943;--brand:#3cc3a6;--brand-ink:#06201a;--warn:#ff8a7a;--ok:#4ed08f;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f161b;--surface:#18222a;--ink:#e8eef2;--muted:#9aa9b4;--line:#2b3943;--brand:#3cc3a6;--brand-ink:#06201a;--warn:#ff8a7a;--ok:#4ed08f;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "DM Sans",system-ui,sans-serif}
+h1,h2,h3{font-family:"Bricolage Grotesque","DM Sans",system-ui,sans-serif;line-height:1.1;margin:0}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line);display:flex;gap:6px;align-items:center;padding:10px 16px;flex-wrap:wrap}
+.top .logo{font-family:"Bricolage Grotesque",sans-serif;font-weight:700;font-size:18px;margin-right:auto;background:none;border:0;padding:6px 0}
+.nav{background:none;border:0;padding:10px 12px;border-radius:8px;min-height:44px;color:var(--muted);font-weight:500}
+.nav[aria-current="true"]{background:var(--bg);color:var(--ink)}
+.wrap{max-width:1080px;margin:0 auto;padding:20px 16px 60px}
+.btn{background:var(--brand);color:var(--brand-ink);border:0;border-radius:8px;padding:12px 18px;min-height:44px;font-weight:700}
+.btn.alt{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.sm{padding:8px 12px;min-height:40px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}
+.muted{color:var(--muted)}
+.hero{display:grid;gap:28px;grid-template-columns:1.1fr .9fr;align-items:center;padding:24px 0 36px}
+.hero h1{font-size:clamp(34px,6vw,58px);letter-spacing:-.02em}
+.urls{display:grid;gap:10px}
+.url{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;text-align:left;width:100%}
+.url b{font-weight:700}.url .dot{width:14px;height:14px;border-radius:50%;flex:none}
+.url span.m{margin-left:auto;color:var(--muted);font-size:14px}
+.slug{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.slug input{flex:1;min-width:180px;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);min-height:44px}
+.msg{margin-top:8px;font-size:14px;min-height:21px}
+.ok{color:var(--ok)}.bad{color:var(--warn)}
+.shopcard{padding:0;overflow:hidden;text-align:left;cursor:pointer;display:block;width:100%}
+.shopcard .bn{height:70px}.shopcard .in{padding:14px}
+/* storefront */
+.addr{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:6px 14px;margin-bottom:14px;font-size:14px;color:var(--muted)}
+.addr b{color:var(--ink)}
+.banner{border-radius:14px;padding:28px 22px;color:#fff;display:flex;gap:16px;align-items:center;background:var(--sa)}
+.banner .lg{width:64px;height:64px;border-radius:14px;background:#ffffff26;display:grid;place-items:center;font:700 28px "Bricolage Grotesque",sans-serif;flex:none}
+.banner h1{font-size:clamp(26px,5vw,40px)}
+.banner p{margin:4px 0 0;opacity:.9;max-width:52ch}
+.bar{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}
+.bar input,.bar select{padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);min-height:44px}
+.bar input{flex:1;min-width:160px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 14px;min-height:44px}
+.chip[aria-pressed="true"]{background:var(--sa);border-color:var(--sa);color:#fff}
+.prod{padding:0;overflow:hidden;text-align:left;display:block;width:100%}
+.ph{aspect-ratio:4/3;display:grid;place-items:center;font-size:54px;background:color-mix(in srgb,var(--sa) 14%,var(--surface))}
+.prod .in{padding:12px 14px}
+.price{font-weight:700}.tag{font-size:13px;color:var(--muted)}
+.out{color:var(--warn);font-size:13px}
+.detail{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:6px}
+.detail .ph{border-radius:12px;font-size:110px}
+.pill{display:inline-block;font-size:13px;padding:2px 10px;border-radius:999px;background:var(--bg);border:1px solid var(--line)}
+.splash{position:fixed;inset:0;z-index:20;display:grid;place-items:center;text-align:center;color:#fff;background:var(--sa);cursor:pointer;padding:24px}
+.splash.out{opacity:0;transition:opacity .45s;pointer-events:none}
+.splash h1{font-size:clamp(44px,13vw,128px);letter-spacing:-.03em;animation:rise .9s ease-out both}
+.splash p{margin:10px 0 0;opacity:.85;font-size:18px}.splash small{display:block;margin-top:28px;opacity:.6}
+.splash .sl{width:84px;height:84px;margin:0 auto 18px;border-radius:20px;background:#ffffff26;display:grid;place-items:center;font:700 40px "Bricolage Grotesque",sans-serif}
+@keyframes rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+.rec{margin:22px 0 4px}
+.stage{position:relative;height:310px;perspective:1000px;overflow:hidden;margin:8px 0}
+.rc{position:absolute;left:50%;top:6px;width:min(230px,60vw);margin-left:calc(min(230px,60vw) / -2);background:var(--surface);border:2px solid var(--line);border-radius:16px;overflow:hidden;padding:0;text-align:left;box-shadow:0 16px 32px rgba(0,0,0,.22);transition:transform .6s ease,opacity .6s ease}
+.rc[aria-current="true"]{border-color:var(--sa)}
+.rc .in{padding:12px 14px}
+.ctl{display:flex;gap:14px;justify-content:center;align-items:center}
+/* dashboard */
+.dash{display:grid;grid-template-columns:200px 1fr;gap:18px}
+.side{display:grid;gap:4px;align-content:start}
+.side .nav{text-align:left}
+.stats{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:16px}
+.stats b{font:700 28px "Bricolage Grotesque",sans-serif;display:block}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th,td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+.scroll{overflow-x:auto}
+form.f{display:grid;gap:12px;max-width:480px}
+.f label{display:grid;gap:4px;font-weight:500}
+.f input,.f select{padding:11px;border:1px solid var(--line);border-radius:8px;background:var(--surface);min-height:44px}
+.who{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.who select{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);min-height:44px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:10px;z-index:9;max-width:90vw}
+.note{background:color-mix(in srgb,var(--brand) 10%,var(--surface));border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:14px;margin-bottom:14px}
+@media (max-width:720px){.hero,.detail{grid-template-columns:1fr}.dash{grid-template-columns:1fr}.side{grid-auto-flow:column;overflow-x:auto}.side .nav{white-space:nowrap}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="top" id="top"></div>
+<main class="wrap" id="app"></main>
+<script>
+var N=function(n){return "₦"+n.toLocaleString("en-NG")};
+var shops={
+techworld:{name:"TechWorld",cat:"Electronics",color:"#1d4ed8",desc:"Phones, laptops and accessories, with warranty on every device.",wa:"+234 801 000 0001",status:"Active",plan:"Standard",
+ cats:["Phones","Laptops","Accessories"],
+ products:[["📱","iPhone 13, 128GB","Phones",620000,4],["💻","HP EliteBook 840","Laptops",780000,2],["🔌","20W fast charger","Accessories",8500,40],["🛡️","Shockproof phone case","Accessories",4000,0],["🎧","Wireless earbuds","Accessories",22000,12]],
+ orders:[["#1042","Amina B.","iPhone 13, 128GB",620000,"Pending"],["#1041","Tunde O.","20W fast charger",8500,"Dispatched"]]},
+oudpalace:{name:"Oud Palace",cat:"Fragrance",color:"#7a4a12",desc:"Oud, bakhoor and perfume oils, blended and sold by the tola.",wa:"+234 802 000 0002",status:"Active",plan:"Premium",
+ cats:["Oud","Perfume","Bakhoor"],
+ products:[["🪵","Royal oud, 50ml","Oud",45000,9],["🧴","Amber perfume spray","Perfume",28000,15],["🕯️","Bakhoor gift set","Bakhoor",12000,22],["💧","Musk oil, 12ml","Perfume",9500,30]],
+ orders:[["#318","Hauwa M.","Royal oud, 50ml",45000,"Confirmed"],["#317","Ibrahim S.","Bakhoor gift set",12000,"Completed"],["#316","Zainab K.","Musk oil, 12ml",9500,"Pending"]]},
+fashionhub:{name:"FashionHub",cat:"Fashion",color:"#a3174f",desc:"Ankara dresses, sandals and bags, made in small batches.",wa:"+234 803 000 0003",status:"Pending approval",plan:"Basic",
+ cats:["Dresses","Shoes","Bags"],
+ products:[["👗","Ankara wrap dress","Dresses",18500,6],["👡","Leather sandals","Shoes",14000,10],["👜","Woven tote bag","Bags",11000,0]],
+ orders:[["#77","Chidinma E.","Ankara wrap dress",18500,"Processing"]]}};
+var S={shop:null,prod:null,q:"",cat:"All",sort:"new",seller:"oudpalace",tab:"Overview",err:""};
+var el=function(i){return document.getElementById(i)};
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function toast(t){var d=document.createElement("div");d.className="toast";d.setAttribute("role","status");d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove()},2600)}
+function go(t){S.prod=null;S.q="";S.cat="All";location.hash=t}
+function route(){var h=location.hash.slice(1)||"home";S.view=h==="home"||h==="dashboard"||h==="admin"?h:(shops[h]?"shop":"home");if(S.view==="shop")S.shop=h;S.prod=null;render();if(S.view==="shop")splash()}
+function head(){var v=S.view;var b=function(t,l,on){return '<button class="nav" '+(on?'aria-current="true" ':'')+'onclick="go(\''+t+'\')">'+l+'</button>'};
+ el("top").innerHTML='<button class="logo" onclick="go(\'home\')">MyStores</button>'+b("home","Visitors",v==="home"||v==="shop")+b("dashboard","Seller dashboard",v==="dashboard")+b("admin","Admin",v==="admin")}
+function home(){var cards=Object.keys(shops).map(function(k){var s=shops[k];return '<button class="card shopcard" onclick="go(\''+k+'\')"><div class="bn" style="background:'+s.color+'"></div><div class="in"><h3>'+s.name+'</h3><div class="muted">'+s.cat+' · mystores.com.ng/'+k+'</div><p class="muted" style="margin:8px 0 0">'+s.desc+'</p></div></button>'}).join("");
+ var urls=Object.keys(shops).map(function(k){var s=shops[k];return '<button class="url" onclick="go(\''+k+'\')"><span class="dot" style="background:'+s.color+'"></span><b>mystores.com.ng/'+k+'</b><span class="m">'+s.products.length+' products</span></button>'}).join("");
+ return '<section class="hero"><div><h1>One platform. Every shop gets its own address.</h1><p class="muted" style="font-size:18px;max-width:46ch">Create a storefront in minutes. Your products, branding, customers and orders stay yours, and are never mixed into another seller’s page.</p>'+
+ '<form class="slug" onsubmit="return chk(event)"><input id="slg" aria-label="Shop address" placeholder="Pick your shop address, e.g. glowcare" autocomplete="off"><button class="btn">Check address</button></form><div class="msg" id="slm" aria-live="polite"></div></div><div class="urls">'+urls+'</div></section>'+
+ '<h2 style="margin-bottom:6px">Browse shops</h2><p class="muted" style="margin:0 0 14px">Pick a shop to see only its products.</p><div class="grid">'+cards+'</div>'}
+function chk(e){e.preventDefault();var v=el("slg").value.trim().toLowerCase(),m=el("slm");
+ if(!/^[a-z0-9-]{3,24}$/.test(v)){m.className="msg bad";m.textContent="Use 3–24 letters, numbers or hyphens.";return false}
+ if(shops[v]||["admin","dashboard","home","login"].indexOf(v)>-1){m.className="msg bad";m.textContent="mystores.com.ng/"+v+" is taken. Try another address.";}
+ else{m.className="msg ok";m.textContent="mystores.com.ng/"+v+" is available.";}return false}
+function shop(){var s=shops[S.shop],k=S.shop,t='style="--sa:'+s.color+'"';
+ var addr='<div class="addr">🔒 mystores.com.ng/<b>'+k+'</b>'+(S.prod!==null?'/product':'')+'</div>';
+ if(S.prod!==null){var p=s.products[S.prod];return '<div '+t+'>'+addr+'<button class="btn alt sm" onclick="S.prod=null;render()">Back to '+esc(s.name)+'</button><div class="detail" style="margin-top:14px"><div class="ph">'+p[0]+'</div><div><span class="pill">'+p[2]+'</span><h1 style="font-size:34px;margin:10px 0">'+esc(p[1])+'</h1><div class="price" style="font-size:26px">'+N(p[3])+'</div><p class="'+(p[4]?'ok':'out')+'">'+(p[4]?(p[4]<5?'Only '+p[4]+' left':'In stock'):'Out of stock')+'</p><p class="muted">Sold by '+esc(s.name)+'. Ask about delivery or pickup before you order.</p><button class="btn" style="background:var(--sa)" onclick="toast(\'Opening WhatsApp chat with '+esc(s.name)+'\')">Order on WhatsApp</button> <button class="btn alt" onclick="toast(\'Checkout is off for this shop\')">Add to cart</button></div></div></div>'}
+ var list=s.products.map(function(p,i){return [p,i]}).filter(function(x){return (S.cat==="All"||x[0][2]===S.cat)&&x[0][1].toLowerCase().indexOf(S.q.toLowerCase())>-1});
+ if(S.sort==="lo")list.sort(function(a,b){return a[0][3]-b[0][3]});if(S.sort==="hi")list.sort(function(a,b){return b[0][3]-a[0][3]});if(S.sort==="new")list.reverse();
+ var chips=["All"].concat(s.cats).map(function(c){return '<button class="chip" aria-pressed="'+(S.cat===c)+'" onclick="S.cat=\''+c+'\';render()">'+c+'</button>'}).join("");
+ var g=list.length?list.map(function(x){var p=x[0];return '<button class="card prod" onclick="S.prod='+x[1]+';render()"><div class="ph">'+p[0]+'</div><div class="in"><div>'+esc(p[1])+'</div><div class="price">'+N(p[3])+'</div>'+(p[4]?'<div class="tag">'+p[2]+'</div>':'<div class="out">Out of stock</div>')+'</div></button>'}).join(""):'<p class="muted">No products match. Clear the search or pick another category.</p>';
+ return '<div '+t+'>'+addr+'<div class="banner"><div class="lg">'+s.name[0]+'</div><div><h1>'+esc(s.name)+'</h1><p>'+esc(s.desc)+'</p><p style="font-size:14px">WhatsApp '+s.wa+'</p></div></div>'+carousel(k)+'<h2 style="margin-top:26px">All products</h2><div class="bar"><input id="q" aria-label="Search this shop" placeholder="Search in '+esc(s.name)+'" value="'+esc(S.q)+'" oninput="S.q=this.value;var c=this.selectionStart;render();var n=el(\'q\');n.focus();n.setSelectionRange(c,c)"><select aria-label="Sort" onchange="S.sort=this.value;render()"><option value="new"'+(S.sort==="new"?" selected":"")+'>Newest</option><option value="lo"'+(S.sort==="lo"?" selected":"")+'>Price: low to high</option><option value="hi"'+(S.sort==="hi"?" selected":"")+'>Price: high to low</option></select></div><div class="bar" style="margin-top:0">'+chips+'</div><div class="grid">'+g+'</div></div>'}
+function dash(){var k=S.seller,s=shops[k],tabs=["Overview","Products","Add product","Orders"];
+ var opts=Object.keys(shops).map(function(x){return '<option value="'+x+'"'+(x===k?' selected':'')+'>'+shops[x].name+'</option>'}).join("");
+ var side=tabs.map(function(t){return '<button class="nav" '+(S.tab===t?'aria-current="true" ':'')+'onclick="S.tab=\''+t+'\';S.err=\'\';render()">'+t+'</button>'}).join("");
+ var body="";
+ if(S.tab==="Overview"){var rev=s.orders.reduce(function(a,o){return a+o[3]},0);
+  body='<div class="stats"><div class="card"><b>'+s.products.length+'</b><span class="muted">Products</span></div><div class="card"><b>'+s.orders.length+'</b><span class="muted">Orders</span></div><div class="card"><b>'+N(rev)+'</b><span class="muted">Order value</span></div><div class="card"><b>'+s.plan+'</b><span class="muted">Plan</span></div></div><div class="card"><h3>Your shop</h3><p class="muted">mystores.com.ng/'+k+' · '+s.status+'</p><button class="btn" onclick="go(\''+k+'\')">Preview your shop</button></div>'}
+ if(S.tab==="Products"){body='<div class="card scroll"><table><tr><th>Product</th><th>Category</th><th>Price</th><th>Stock</th><th></th></tr>'+s.products.map(function(p,i){return '<tr><td>'+p[0]+' '+esc(p[1])+'</td><td>'+p[2]+'</td><td>'+N(p[3])+'</td><td>'+p[4]+'</td><td><button class="btn alt sm" onclick="delp('+i+')">Delete</button></td></tr>'}).join("")+'</table></div>'}
+ if(S.tab==="Add product"){body='<div class="card"><form class="f" onsubmit="return addp(event)"><label>Product name<input id="pn"></label><label>Category<select id="pc">'+s.cats.map(function(c){return '<option>'+c+'</option>'}).join("")+'</select></label><label>Price (₦)<input id="pp" inputmode="numeric"></label><label>Stock quantity<input id="ps" inputmode="numeric" value="1"></label><label>Photos<input type="file" accept="image/jpeg,image/png,image/webp" multiple></label><div class="msg bad" role="alert">'+S.err+'</div><button class="btn">Publish product</button></form></div>'}
+ if(S.tab==="Orders"){body='<div class="card scroll"><table><tr><th>Order</th><th>Customer</th><th>Item</th><th>Total</th><th>Status</th></tr>'+s.orders.map(function(o,i){return '<tr><td>'+o[0]+'</td><td>'+o[1]+'</td><td>'+o[2]+'</td><td>'+N(o[3])+'</td><td><select aria-label="Order status" onchange="shops[S.seller].orders['+i+'][4]=this.value;toast(\'Status updated\')">'+["Pending","Confirmed","Processing","Dispatched","Completed","Cancelled"].map(function(x){return '<option'+(x===o[4]?' selected':'')+'>'+x+'</option>'}).join("")+'</select></td></tr>'}).join("")+'</table></div>'}
+ return '<div class="who"><label>Signed in as seller of <select onchange="S.seller=this.value;S.tab=\'Overview\';render()">'+opts+'</select></label></div><div class="note">You only see '+esc(s.name)+'’s data here. Switch seller to see that another shop’s products and orders are never shown.</div><div class="dash"><nav class="side" aria-label="Dashboard">'+side+'</nav><section>'+body+'</section></div>'}
+function addp(e){e.preventDefault();var n=el("pn").value.trim(),pr=Number(el("pp").value),st=Number(el("ps").value);
+ if(!n)S.err="Enter a product name.";else if(!(pr>0))S.err="Enter a price above ₦0, using numbers only.";else if(!(st>=0)||st%1)S.err="Stock must be a whole number, 0 or more.";else S.err="";
+ if(S.err){render();return false}
+ var s=shops[S.seller];s.products.push(["🆕",n,el("pc").value,pr,st]);S.tab="Products";render();toast("Published. It appears only on mystores.com.ng/"+S.seller);return false}
+function delp(i){shops[S.seller].products.splice(i,1);render();toast("Product deleted")}
+function admin(){var rows=Object.keys(shops).map(function(k){var s=shops[k],a=s.status==="Active";return '<tr><td><b>'+s.name+'</b><div class="muted">mystores.com.ng/'+k+'</div></td><td>'+s.cat+'</td><td>'+s.plan+'</td><td>'+s.products.length+'</td><td>'+s.status+'</td><td><button class="btn alt sm" onclick="shops[\''+k+'\'].status=\''+(a?'Suspended':'Active')+'\';render();toast(\'Shop '+(a?'suspended':'approved')+'\')">'+(a?'Suspend':(s.status==="Pending approval"?'Approve':'Reactivate'))+'</button></td></tr>'}).join("");
+ return '<h2 style="margin-bottom:14px">All shops</h2><div class="stats"><div class="card"><b>'+Object.keys(shops).length+'</b><span class="muted">Shops</span></div><div class="card"><b>'+Object.keys(shops).filter(function(k){return shops[k].status==="Active"}).length+'</b><span class="muted">Active</span></div><div class="card"><b>'+N(2000)+'</b><span class="muted">Basic plan per month</span></div></div><div class="card scroll"><table><tr><th>Shop</th><th>Category</th><th>Plan</th><th>Products</th><th>Status</th><th></th></tr>'+rows+'</table></div>'}
+function render(){clearInterval(timer);head();var v=S.view;el("app").innerHTML=v==="home"?home():v==="shop"?shop():v==="dashboard"?dash():admin();if(v==="shop")rcInit();
+ if(v==="shop"&&shops[S.shop].status==="Suspended")el("app").innerHTML='<div class="card"><h2>This shop is unavailable</h2><p class="muted">The platform admin has suspended it.</p></div>'}
+var timer=null;
+function splash(){var s=shops[S.shop],d=document.createElement('div');d.className='splash';d.style.setProperty('--sa',s.color);d.setAttribute('role','status');d.innerHTML='<div><div class="sl">'+s.name[0]+'</div><h1>'+esc(s.name)+'</h1><p>'+esc(s.cat)+' · mystores.com.ng/'+S.shop+'</p><small>Tap to skip</small></div>';var end=function(){d.classList.add('out');setTimeout(function(){d.remove()},450)};d.onclick=end;document.body.appendChild(d);setTimeout(end,2000)}
+function carousel(k){var s=shops[k],items=[];s.products.forEach(function(p,i){if(p[4]>0)items.push(i)});items=items.slice(0,5);S.items=items;if(items.length<2)return '';if(S.ck!==k||S.ci===undefined||S.ci>=items.length){S.ci=0;S.ck=k}
+ var cards=items.map(function(pi,j){var p=s.products[pi];return '<button class="rc" onclick="rcClick('+j+','+pi+')" aria-label="'+esc(p[1])+', '+N(p[3])+'"><div class="ph">'+p[0]+'</div><div class="in"><div>'+esc(p[1])+'</div><div class="price">'+N(p[3])+'</div></div></button>'}).join('');
+ return '<section class="rec" aria-label="Recommended products"><h2>Recommended</h2><div class="stage" id="stage">'+cards+'</div><div class="ctl"><button class="btn alt sm" onclick="rcMove(-1)" aria-label="Previous product">‹</button><span class="muted" id="rcn"></span><button class="btn alt sm" onclick="rcMove(1)" aria-label="Next product">›</button></div></section>'}
+function rcPose(){var st=el('stage');if(!st||!S.items)return;var n=S.items.length,h=Math.floor(n/2);Array.prototype.forEach.call(st.children,function(c,j){var o=((j-S.ci+n+h)%n)-h,a=Math.abs(o);c.style.transform='translateX('+o*52+'%) translateZ('+(-a*90)+'px) rotateY('+(-o*30)+'deg) scale('+(1-a*.08)+')';c.style.opacity=a>2?0:1-a*.2;c.style.zIndex=10-a;c.style.pointerEvents=a>2?'none':'auto';c.tabIndex=a>2?-1:0;if(o===0)c.setAttribute('aria-current','true');else c.removeAttribute('aria-current')});var t=el('rcn');if(t)t.textContent=(S.ci+1)+' of '+n}
+function rcMove(d){var n=S.items.length;S.ci=(S.ci+d+n)%n;rcPose()}
+function rcClick(j,pi){if(j===S.ci){S.prod=pi;render()}else{S.ci=j;rcPose()}}
+function rcInit(){var st=el('stage');if(!st)return;rcPose();var p=0;st.onmouseenter=st.onfocusin=function(){p=1};st.onmouseleave=st.onfocusout=function(){p=0};if(!matchMedia('(prefers-reduced-motion: reduce)').matches)timer=setInterval(function(){if(!p)rcMove(1)},3200)}
+window.addEventListener("hashchange",route);route();
+</script>
+</body>
+</html>
