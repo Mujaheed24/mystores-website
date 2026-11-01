@@ -26,3 +26,15 @@ Create your account, then: `GOOGLE_APPLICATION_CREDENTIALS=key.json npm run make
 
 ## Next
 Seller sign-up and shop setup wizard, seller dashboard with product upload (images to Storage), admin area, order handling via a Cloud Function.
+
+## Phase 2: sellers and admin
+- `/sell` – Google sign-in, then the shop setup wizard (address check, category, WhatsApp number, colour)
+- `/dashboard` – products (add, edit, publish/draft, recommend, delete), shop profile, photo upload (compressed to WebP in the browser)
+- `/admin` – approve, suspend and reactivate shops (administrators only)
+- New shops start as **pending**. Approve them at `/admin` before visitors can see them.
+- Redeploy the rules after updating: `npx firebase-tools deploy --only firestore:rules,storage`
+
+## Phase 2b
+- One shop per account, enforced in the rules through `owners/{uid}`. For shops that existed before this change, run once: `node scripts/backfill-owners.mjs`
+- Logo and banner uploads on the Shop profile tab; they show on the storefront, entry banner and directory cards
+- Deleting a product, or removing/replacing a photo, now deletes the file from Storage

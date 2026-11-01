@@ -9,7 +9,42 @@ service cloud.firestore {
     // Keep in sync with src/lib/slug.ts
     function validSlug(s) {
       return s is string && s.matches('^[a-z0-9-]{3,24}$')
-        && !(s in ['admin','dashboard','home','login','signup','api','shops','help','support','terms','privacy']);
+        && !(s in ['admin','dashboard','home','login','signup','api','shops','help','support','terms','privacy','sell']);
+    }
+
+    // Optional shop info fields. Keep the state list in sync with src/lib/options.ts (NG_STATES).
+    function validExtras(d) {
+      return d.get('state', '') is string
+        && (d.get('state', '') == '' || d.get('state', '') in ['Abia', 'Adamawa', 'Akwa Ibom', 'Anambra', 'Bauchi', 'Bayelsa', 'Benue', 'Borno', 'Cross River', 'Delta', 'Ebonyi', 'Edo', 'Ekiti', 'Enugu', 'FCT Abuja', 'Gombe', 'Imo', 'Jigawa', 'Kaduna', 'Kano', 'Katsina', 'Kebbi', 'Kogi', 'Kwara', 'Lagos', 'Nasarawa', 'Niger', 'Ogun', 'Ondo', 'Osun', 'Oyo', 'Plateau', 'Rivers', 'Sokoto', 'Taraba', 'Yobe', 'Zamfara'])
+        && d.get('city', '') is string && d.get('city', '').size() <= 60
+        && d.get('openingHours', '') is string && d.get('openingHours', '').size() <= 120
+        && d.get('deliveryNotes', '') is string && d.get('deliveryNotes', '').size() <= 300
+        // several categories (up to 5) and extra places (up to 4): keep in sync with MAX_CATEGORIES and MAX_EXTRA_PLACES in src/lib/options.ts
+        && d.get('categories', []) is list && d.get('categories', []).size() <= 5
+        && d.get('locations', []) is list && d.get('locations', []).size() <= 4
+        // custom shop colour: a 6-digit hex code such as #0c6b58
+        && d.get('themeColor', '#000000') is string && d.get('themeColor', '#000000').matches('^#[0-9a-fA-F]{6}$');
+    }
+
+    // WhatsApp number must be stored in the normalized Nigerian form +234XXXXXXXXXX (keep in sync with normalizeNgPhone in src/lib/options.ts).
+    function validContact(d) {
+      return d.get('whatsappNumber', '') is string && d.get('whatsappNumber', '').matches('^\\+234[789][01][0-9]{8}$');
+    }
+
+    // Reports: anyone may send one about an ACTIVE shop (or one of its products). Only the administrator reads or handles them.
+    function validReport(d) {
+      return d.keys().hasOnly(['shopId', 'productId', 'reason', 'details', 'contact', 'status', 'createdAt'])
+        && d.keys().hasAll(['shopId', 'reason', 'status', 'createdAt'])
+        && d.shopId is string && d.shopId.size() > 0 && d.shopId.size() <= 60
+        && exists(/databases/$(database)/documents/shops/$(d.shopId))
+        && shopDoc(d.shopId).data.status == 'active'
+        && (!('productId' in d)
+            || (d.productId is string && d.productId.size() > 0 && d.productId.size() <= 60
+                && exists(/databases/$(database)/documents/shops/$(d.shopId)/products/$(d.productId))))
+        && d.reason in ['scam', 'illegal', 'adult', 'copied', 'other']
+        && d.get('details', '') is string && d.get('details', '').size() <= 500
+        && d.get('contact', '') is string && d.get('contact', '').size() <= 100
+        && d.status == 'new' && d.createdAt == request.time;
     }
 
     // ---- Shop addresses: the document ID is the address, so it can only exist once.
@@ -21,7 +56,24 @@ service cloud.firestore {
         && request.resource.data.ownerUid == request.auth.uid
         && getAfter(/databases/$(database)/documents/shops/$(request.resource.data.shopId)).data.slug == slug
         && getAfter(/databases/$(database)/documents/shops/$(request.resource.data.shopId)).data.ownerUid == request.auth.uid;
-      allow update, delete: if false;
+      allow update: if false;
+      // The owner can release the address, but ONLY in the same batch that deletes the shop (account deletion).
+      allow delete: if isAdmin()
+        || (signedIn() && resource.data.ownerUid == request.auth.uid
+            && !existsAfter(/databases/$(database)/documents/shops/$(resource.data.shopId)));
+    }
+
+    // One record per seller. It can be created once and never changed by the seller.
+    match /owners/{uid} {
+      allow read: if (signedIn() && request.auth.uid == uid) || isAdmin();
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['shopId'])
+        && getAfter(/databases/$(database)/documents/shops/$(request.resource.data.shopId)).data.ownerUid == uid;
+      allow update: if false;
+      // The seller can remove their own record, but ONLY together with their shop (so nobody can open a second shop).
+      allow delete: if isAdmin()
+        || (signedIn() && request.auth.uid == uid
+            && !existsAfter(/databases/$(database)/documents/shops/$(resource.data.shopId)));
     }
 
     match /shops/{shopId} {
@@ -31,15 +83,22 @@ service cloud.firestore {
         || isAdmin();
 
       // New shops start as pending, must own their slug, and cannot pick a plan.
+      // The seller's email must be verified (Google accounts always are; email/password accounts must click the link).
       allow create: if signedIn()
+        && request.auth.token.email_verified == true
         && request.resource.data.ownerUid == request.auth.uid
         && request.resource.data.status == 'pending'
         && request.resource.data.subscriptionPlan == 'basic'
         && validSlug(request.resource.data.slug)
         && request.resource.data.name is string
         && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 60
+        && validExtras(request.resource.data)
+        && validContact(request.resource.data)
         && existsAfter(/databases/$(database)/documents/slugs/$(request.resource.data.slug))
-        && getAfter(/databases/$(database)/documents/slugs/$(request.resource.data.slug)).data.shopId == shopId;
+        && getAfter(/databases/$(database)/documents/slugs/$(request.resource.data.slug)).data.shopId == shopId
+        // One shop per account: the owners/{uid} record must be created together with the shop.
+        && existsAfter(/databases/$(database)/documents/owners/$(request.auth.uid))
+        && getAfter(/databases/$(database)/documents/owners/$(request.auth.uid)).data.shopId == shopId;
 
       // Owners may edit profile fields only. Ownership, address, status and plan are locked.
       allow update: if isAdmin()
@@ -47,15 +106,26 @@ service cloud.firestore {
             && request.resource.data.ownerUid == resource.data.ownerUid
             && request.resource.data.slug == resource.data.slug
             && request.resource.data.status == resource.data.status
-            && request.resource.data.subscriptionPlan == resource.data.subscriptionPlan);
-      allow delete: if isAdmin();
+            && request.resource.data.subscriptionPlan == resource.data.subscriptionPlan
+            && validExtras(request.resource.data)
+            && validContact(request.resource.data));
+      // The owner can delete their shop only if its address and owner record go in the same batch.
+      allow delete: if isAdmin()
+        || (signedIn() && resource.data.ownerUid == request.auth.uid
+            && !existsAfter(/databases/$(database)/documents/slugs/$(resource.data.slug))
+            && !existsAfter(/databases/$(database)/documents/owners/$(request.auth.uid)));
 
       match /products/{productId} {
         function validProduct(d) {
           return d.shopId == shopId
             && d.sellerUid == request.auth.uid
-            && d.name is string && d.name.size() > 0 && d.name.size() <= 120
-            && d.price is number && d.price >= 0 && d.price <= 1000000000
+            && d.name is string && d.name.size() <= 120
+            && d.get('imageUrls', []) is list && d.get('imageUrls', []).size() <= 6
+            && (d.get('thumbUrl', null) == null || (d.thumbUrl is string && d.thumbUrl.size() <= 800))
+            // image-only products are allowed: a product needs a name OR at least one photo
+            && (d.name.size() > 0 || d.get('imageUrls', []).size() > 0)
+            // price is optional (null = "ask for price")
+            && (d.get('price', null) == null || (d.price is number && d.price >= 0 && d.price <= 1000000000))
             && d.stockQuantity is int && d.stockQuantity >= 0
             && d.status in ['draft', 'published']
             && d.featured is bool;
@@ -70,6 +140,30 @@ service cloud.firestore {
         allow delete: if ownsShop(shopId) || isAdmin();
       }
 
+      // Seller statistics: one counter document per product, plus "_shop" for the shop page.
+      // Visitors (no sign-in) may only add exactly 1 to ONE counter per write, and only for an active shop's
+      // published product. They can never read, lower, reset or delete counters. Only the owner/admin read them.
+      match /stats/{statId} {
+        function validStat(d) {
+          return d.keys().hasOnly(['views', 'taps', 'updatedAt'])
+            && d.views is int && d.taps is int && d.views >= 0 && d.taps >= 0
+            && d.updatedAt == request.time;
+        }
+        function countable() {
+          return shopDoc(shopId).data.status == 'active'
+            && (statId == '_shop'
+                || get(/databases/$(database)/documents/shops/$(shopId)/products/$(statId)).data.status == 'published');
+        }
+        allow read: if ownsShop(shopId) || isAdmin();
+        allow create: if countable() && validStat(request.resource.data)
+          && request.resource.data.views + request.resource.data.taps == 1;
+        allow update: if countable() && validStat(request.resource.data)
+          && request.resource.data.views >= resource.data.views
+          && request.resource.data.taps >= resource.data.taps
+          && (request.resource.data.views - resource.data.views) + (request.resource.data.taps - resource.data.taps) == 1;
+        allow delete: if ownsShop(shopId) || isAdmin();
+      }
+
       // Orders are created by trusted server code only (Cloud Function). Sellers read and update their own.
       match /orders/{orderId} {
         allow read: if ownsShop(shopId) || isAdmin();
@@ -77,8 +171,17 @@ service cloud.firestore {
         allow update: if ownsShop(shopId)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['orderStatus', 'updatedAt'])
           && request.resource.data.orderStatus in ['pending','confirmed','processing','dispatched','completed','cancelled'];
-        allow delete: if false;
+        allow delete: if isAdmin();
       }
+    }
+
+    // ---- Reports ----
+    match /reports/{reportId} {
+      allow create: if validReport(request.resource.data);
+      allow read, delete: if isAdmin();
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reviewedAt'])
+        && request.resource.data.status in ['new', 'reviewed', 'dismissed'];
     }
 
     match /{document=**} { allow read, write: if false; }

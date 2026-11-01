@@ -1,0 +1,5 @@
+.box{display:grid;gap:14px;margin:14px 0 6px}
+.row{display:grid;grid-template-columns:34px 1fr;gap:12px;align-items:start}
+.ic{font-size:22px;line-height:1.4}
+.row h3{font-size:16px;margin:0 0 2px;color:var(--muted);font-weight:700}
+.row p{margin:0;font-size:18px;white-space:pre-line;overflow-wrap:anywhere}

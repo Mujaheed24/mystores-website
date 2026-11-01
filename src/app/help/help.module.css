@@ -1,0 +1,15 @@
+.page{max-width:760px}
+.lead{font-size:20px;color:var(--muted);margin:6px 0 26px}
+.group{font-size:26px;margin:38px 0 12px}
+.faq{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);margin:0 0 12px;box-shadow:var(--shadow)}
+.faq summary{list-style:none;cursor:pointer;min-height:60px;padding:16px 56px 16px 20px;font-weight:800;font-size:18px;position:relative;display:flex;align-items:center;border-radius:var(--r-sm)}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";position:absolute;right:20px;top:50%;translate:0 -50%;font-size:28px;font-weight:600;color:var(--brand);transition:rotate .25s var(--ease)}
+.faq[open] summary::after{rotate:45deg}
+.faq summary:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+.ans{padding:0 20px 18px;font-size:18px}
+.ans p{margin:0 0 10px}.ans ol,.ans ul{margin:0 0 10px;padding-left:22px}.ans li{margin-bottom:6px}
+.contact{margin-top:40px}
+.contact h2{font-size:26px;margin:0 0 6px}.contact p{margin:0 0 16px;color:var(--muted)}
+.actions{display:flex;gap:12px;flex-wrap:wrap}
+@media (prefers-reduced-motion:reduce){.faq summary::after{transition:none}}

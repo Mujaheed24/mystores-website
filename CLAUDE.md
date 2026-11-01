@@ -14,3 +14,9 @@ npm run dev | npm run build | npm run seed | npm run test:rules
 
 ## Docs
 docs/ holds the blueprint (what to build) and the clickable preview (how it should look).
+
+## Design rules
+- Big and simple for phone users: 18px text, 58px buttons, 60px inputs, tap targets 44px or more.
+- Use the tokens in src/app/globals.css. Font is Plus Jakarta Sans (self-hosted).
+- All motion must respect prefers-reduced-motion.
+- Never animate `transform` on `.wrap` or any ancestor of a `position: fixed` element; it breaks fixed positioning.

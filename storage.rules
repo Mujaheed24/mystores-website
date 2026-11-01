@@ -1,15 +1,31 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // Product images, logos and banners live under shops/{shopId}/...
-    match /shops/{shopId}/{allPaths=**} {
-      allow read: if true;
-      allow write: if request.auth != null
-        && firestore.get(/databases/(default)/documents/shops/$(shopId)).data.ownerUid == request.auth.uid
-        && request.resource.size < 5 * 1024 * 1024
-        && request.resource.contentType.matches('image/(jpeg|png|webp)');
-      allow delete: if request.auth != null
+    // Only the verified owner of the shop may change its files (checked against the shop's ownerUid in Firestore).
+    function ownsShop(shopId) {
+      return request.auth != null
+        && request.auth.token.email_verified == true
         && firestore.get(/databases/(default)/documents/shops/$(shopId)).data.ownerUid == request.auth.uid;
+    }
+    // Images only, under 5 MB (the browser already compresses to WebP before upload).
+    function okImage() {
+      return request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|png|webp)');
+    }
+    function isAdmin() { return request.auth != null && request.auth.token.admin == true; }
+    function okName(file) { return file.matches('^[A-Za-z0-9._-]{1,80}$'); }
+
+    // Product photos: shops/{shopId}/products/{productId}/{file}
+    match /shops/{shopId}/products/{productId}/{file} {
+      allow read: if true;
+      allow create, update: if ownsShop(shopId) && okImage() && okName(file);
+      allow delete: if ownsShop(shopId) || isAdmin();
+    }
+    // Logo and banner: shops/{shopId}/branding/{file}
+    match /shops/{shopId}/branding/{file} {
+      allow read: if true;
+      allow create, update: if ownsShop(shopId) && okImage() && okName(file);
+      allow delete: if ownsShop(shopId) || isAdmin();
     }
     match /{allPaths=**} { allow read, write: if false; }
   }
