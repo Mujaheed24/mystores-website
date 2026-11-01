@@ -60,7 +60,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     catch (e: any) {
       setSigningIn(false);
       if (quiet(e?.code)) return null;
-      return "Google sign-in failed. Check that Google sign-in is turned on in Firebase and try again.";
+      switch (e?.code) { // say the real reason, so it is clear what to fix
+        case "auth/unauthorized-domain": return `This web address (${location.hostname}) is not allowed yet. In Firebase, go to Authentication, Settings, Authorized domains, and add it.`;
+        case "auth/operation-not-allowed": return "Google sign-in is not turned on. In Firebase, go to Authentication, Sign-in method, and enable Google.";
+        case "auth/popup-blocked": return "Your browser blocked the sign-in window. Allow pop-ups for this site and try again.";
+        case "auth/network-request-failed": return "No internet connection. Check your data and try again.";
+        case "auth/invalid-api-key": case "auth/api-key-not-valid.-please-pass-a-valid-api-key.": return "The Firebase key on this site is wrong or missing. Check the environment variables on your host.";
+        default: return `Google sign-in failed (${e?.code ?? "unknown"}). Please try again.`;
+      }
     }
   };
   const signInEmail = (email: string, pw: string) => run(() => signInWithEmailAndPassword(getAuthClient(), email.trim(), pw));
