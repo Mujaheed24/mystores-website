@@ -10,7 +10,7 @@ export default function ProductCard({ p, stat, canFeature, onToggle, onFeature, 
     <article className="card prow">
       <div className="top">
         <div className="tn">{p.imageUrls[0] ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={p.thumbUrl || p.imageUrls[0]} alt="" loading="lazy" decoding="async" /> : p.emoji}</div>
-        <div><h3>{p.name || "Photo only"}</h3><div className="sub">{priceLabel(p.price)} · {p.stockQuantity === 0 ? "Sold out" : `${p.stockQuantity} in stock`}</div>
+        <div><h3>{p.name || "Photo only"}{p.videoUrl && <span className="muted" title="Has a video"> 🎬</span>}</h3><div className="sub">{priceLabel(p.price)} · {p.stockQuantity === 0 ? "Sold out" : `${p.stockQuantity} in stock`}</div>
           <div className="sub stat" aria-label={`${stat?.views ?? 0} views, ${stat?.taps ?? 0} WhatsApp taps`}>👁 {stat?.views ?? 0} views · 💬 {stat?.taps ?? 0} taps</div></div>
       </div>
       <div className="acts">

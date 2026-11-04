@@ -80,7 +80,7 @@ export default function ProductGrid({ slug, shopName, whatsapp, products }: { sl
                 <Link className="pclink" href={`/${slug}/p/${p.id}`} aria-label={p.name || "View photo"}>
                   <div className="ph"><ProductImage p={p} />
                     {p.stockQuantity === 0 ? <span className="badge sold">Sold out</span> : p.featured && <span className="badge">★ Pick</span>}
-                    <span className="ptag">{priceLabel(p.price)}</span></div>
+                    {p.videoUrl && <span className="vbadge" aria-label="Has a video">▶ Video</span>}<span className="ptag">{priceLabel(p.price)}</span></div>
                   {p.name && <div className="pin"><div className="pname">{p.name}</div></div>}
                 </Link>
                 <ExpandButton p={p} slug={slug} shopName={shopName} whatsapp={whatsapp} />

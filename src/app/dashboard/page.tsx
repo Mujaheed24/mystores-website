@@ -54,7 +54,7 @@ export default function Dashboard() {
   };
   const remove = async (p: Product) => {
     if (!confirm(`Delete "${p.name}"? This cannot be undone.`)) return;
-    try { await deleteDoc(doc(db, "shops", shop.id, "products", p.id)); setProducts((ps) => ps.filter((x) => x.id !== p.id)); await Promise.all([deleteStat(shop.id, p.id), deleteImages([...p.imageUrls, ...(p.thumbUrl ? [p.thumbUrl] : [])])]); say("Product deleted"); } catch (e) { say(errText(e)); }
+    try { await deleteDoc(doc(db, "shops", shop.id, "products", p.id)); setProducts((ps) => ps.filter((x) => x.id !== p.id)); await Promise.all([deleteStat(shop.id, p.id), deleteImages([...p.imageUrls, ...(p.thumbUrl ? [p.thumbUrl] : []), ...(p.videoUrl ? [p.videoUrl] : []), ...(p.videoPoster ? [p.videoPoster] : [])])]); say("Product deleted"); } catch (e) { say(errText(e)); }
   };
   const statusNote = shop.status === "active" ? null : shop.status === "pending"
     ? "Your shop is waiting for approval. Add your products now. Customers can see your shop once it is approved."

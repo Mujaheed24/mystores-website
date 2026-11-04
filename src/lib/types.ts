@@ -4,7 +4,7 @@ export type Shop = {
 };
 export type Product = {
   id: string; shopId: string; sellerUid: string; name: string; description: string; category: string;
-  price: number | null; stockQuantity: number; status: "draft" | "published"; featured: boolean; emoji: string; imageUrls: string[]; thumbUrl?: string | null; createdAt: number;
+  price: number | null; stockQuantity: number; status: "draft" | "published"; featured: boolean; emoji: string; imageUrls: string[]; thumbUrl?: string | null; videoUrl?: string | null; videoPoster?: string | null; createdAt: number;
 };
 export const naira = (n: number) => "₦" + n.toLocaleString("en-NG");
 export const priceLabel = (p: number | null | undefined) => (p === null || p === undefined ? "Ask for price" : naira(p));

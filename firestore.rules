@@ -122,6 +122,9 @@ service cloud.firestore {
             && d.name is string && d.name.size() <= 120
             && d.get('imageUrls', []) is list && d.get('imageUrls', []).size() <= 6
             && (d.get('thumbUrl', null) == null || (d.thumbUrl is string && d.thumbUrl.size() <= 800))
+            // one optional video per product, with a still picture of it (both are addresses of files in Storage)
+            && (d.get('videoUrl', null) == null || (d.videoUrl is string && d.videoUrl.size() <= 800))
+            && (d.get('videoPoster', null) == null || (d.videoPoster is string && d.videoPoster.size() <= 800))
             // image-only products are allowed: a product needs a name OR at least one photo
             && (d.name.size() > 0 || d.get('imageUrls', []).size() > 0)
             // price is optional (null = "ask for price")

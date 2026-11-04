@@ -348,4 +348,7 @@ test("product small photo copy: a link is allowed, a non-text value is refused",
   const db = as("A");
   await assertSucceeds(setDoc(doc(db, "shops/sA/products/thumbok"), { ...prod("sA", "A", "published"), imageUrls: ["https://x/a.webp"], thumbUrl: "https://x/a-t.webp" }));
   await assertFails(setDoc(doc(db, "shops/sA/products/thumbbad"), { ...prod("sA", "A", "published"), imageUrls: ["https://x/a.webp"], thumbUrl: 123 }));
+  await assertSucceeds(setDoc(doc(db, "shops/sA/products/videook"), { ...prod("sA", "A", "published"), videoUrl: "https://x/v.mp4", videoPoster: "https://x/v-p.webp" }));
+  await assertFails(setDoc(doc(db, "shops/sA/products/videobad"), { ...prod("sA", "A", "published"), videoUrl: 123 }));
+  await assertFails(setDoc(doc(db, "shops/sA/products/videolong"), { ...prod("sA", "A", "published"), videoUrl: "https://x/" + "a".repeat(800) }));
 });

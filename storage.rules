@@ -12,13 +12,18 @@ service firebase.storage {
       return request.resource.size < 5 * 1024 * 1024
         && request.resource.contentType.matches('image/(jpeg|png|webp)');
     }
+    // One video per product: MP4, WebM or MOV, under 40 MB (the app also limits it to 60 seconds).
+    function okVideo() {
+      return request.resource.size < 40 * 1024 * 1024
+        && request.resource.contentType.matches('video/(mp4|webm|quicktime)');
+    }
     function isAdmin() { return request.auth != null && request.auth.token.admin == true; }
     function okName(file) { return file.matches('^[A-Za-z0-9._-]{1,80}$'); }
 
-    // Product photos: shops/{shopId}/products/{productId}/{file}
+    // Product photos and videos: shops/{shopId}/products/{productId}/{file}
     match /shops/{shopId}/products/{productId}/{file} {
       allow read: if true;
-      allow create, update: if ownsShop(shopId) && okImage() && okName(file);
+      allow create, update: if ownsShop(shopId) && (okImage() || okVideo()) && okName(file);
       allow delete: if ownsShop(shopId) || isAdmin();
     }
     // Logo and banner: shops/{shopId}/branding/{file}

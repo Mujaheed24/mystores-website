@@ -45,3 +45,13 @@ test("storage: owner can delete a photo, others cannot", async () => {
 });
 test("storage: the administrator can delete any shop's photo", () =>
   assertSucceeds(deleteObject(ref(env.authenticatedContext("root", { admin: true, email_verified: true }).storage(), "shops/sA/products/p1/seed2.webp"))));
+
+test("storage: owner can upload a product video, others cannot, and wrong types or huge files are refused", async () => {
+  const vid = new Uint8Array([0, 0, 0, 24]);
+  await assertSucceeds(put(owner("A"), "shops/sA/products/p1/clip-1.mp4", vid, "video/mp4"));
+  await assertSucceeds(put(owner("A"), "shops/sA/products/p1/clip-2.mov", vid, "video/quicktime"));
+  await assertFails(put(owner("B"), "shops/sA/products/p1/evil.mp4", vid, "video/mp4"));
+  await assertFails(put(owner("A"), "shops/sA/products/p1/clip-3.avi", vid, "video/x-msvideo"));
+  await assertFails(put(owner("A"), "shops/sA/products/p1/clip-4.mp4", new Uint8Array(40 * 1024 * 1024 + 1), "video/mp4"));
+  await assertFails(put(owner("A"), "shops/sA/branding/clip.mp4", vid, "video/mp4")); // videos are for products only
+});

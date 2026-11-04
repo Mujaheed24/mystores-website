@@ -1,8 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { collection, doc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { deleteImages, uploadProductPhoto } from "@/lib/images";
+import { MAX_VIDEO_MB, MAX_VIDEO_SECONDS, VIDEO_TYPES, deleteImages, inspectVideo, uploadProductPhoto, uploadProductVideo } from "@/lib/images";
 import { MAX_FEATURED, shopCategories } from "@/lib/options";
 import { errText } from "@/lib/seller";
 import type { Product, Shop } from "@/lib/types";
@@ -19,6 +19,14 @@ export default function ProductForm({ shop, uid, product, categories, featuredCo
   const [desc, setDesc] = useState(product?.description ?? ""), [status, setStatus] = useState<"draft" | "published">(product?.status ?? "published");
   const [featured, setFeatured] = useState(product?.featured ?? false), [images, setImages] = useState<string[]>(product?.imageUrls ?? []);
   const [picks, setPicks] = useState<Pick[]>([]), [removed, setRemoved] = useState<string[]>([]), [err, setErr] = useState(""), [busy, setBusy] = useState(false);
+  // video: the one already saved (if any), or a new one just chosen
+  const [video, setVideo] = useState<{ url: string; poster: string | null } | null>(product?.videoUrl ? { url: product.videoUrl, poster: product.videoPoster ?? null } : null);
+  const [vidFile, setVidFile] = useState<File | null>(null), [vidUrl, setVidUrl] = useState(""), [pct, setPct] = useState(0);
+  useEffect(() => { if (!vidFile) return setVidUrl(""); const u = URL.createObjectURL(vidFile); setVidUrl(u); return () => URL.revokeObjectURL(u); }, [vidFile]);
+  async function pickVideo(f: File | undefined) {
+    if (!f) return; setErr("");
+    try { await inspectVideo(f); setVidFile(f); } catch (x) { setErr(errText(x)); } // checks the type, size and length straight away
+  }
   // suggestions: categories already used on this shop first, then the shop's own categories (no duplicates, capital letters ignored)
   const sugg = Array.from(new Map([...categories, ...shopCategories(shop)].map((c) => c.trim()).filter(Boolean).map((c) => [c.toLowerCase(), c])).values()).slice(0, 14);
   const canFeature = featured || featuredCount < MAX_FEATURED;
@@ -30,7 +38,7 @@ export default function ProductForm({ shop, uid, product, categories, featuredCo
   async function submit(e: React.FormEvent) {
     e.preventDefault(); setErr("");
     const photos = images.length + picks.length;
-    if (!name.trim() && photos === 0) return setErr("Add a photo, or type a name. A product needs at least one.");
+    if (!name.trim() && photos === 0 && !video && !vidFile) return setErr("Add a photo, or type a name. A product needs at least one.");
     let p: number | null = null;
     if (price.trim() !== "") {
       const n = Number(price.replace(/[,\s₦]/g, ""));
@@ -49,11 +57,19 @@ export default function ProductForm({ shop, uid, product, categories, featuredCo
       // all photos go up at the same time (much faster than one after another); their order is kept
       const ups = await Promise.all(picks.map((k) => uploadProductPhoto(shop.id, ref.id, k.f)));
       for (const r of ups) { if (urls.length === 0) thumb = r.thumbUrl; urls.push(r.url); }
+      // video: upload a new one, or remember it was removed. A product with a video but no photo uses the video's cover picture as its photo.
+      let videoUrl = video?.url ?? null, videoPoster = video?.poster ?? null;
+      if (vidFile) {
+        const r = await uploadProductVideo(shop.id, ref.id, vidFile, setPct);
+        videoUrl = r.videoUrl; videoPoster = r.posterUrl;
+        if (urls.length === 0) { urls.push(r.posterUrl); thumb = r.posterUrl; }
+      }
+      const oldVideoFiles = (keep: string[]) => (product?.videoUrl && product.videoUrl !== videoUrl ? [product.videoUrl, ...(product.videoPoster && !keep.includes(product.videoPoster) && product.videoPoster !== thumb ? [product.videoPoster] : [])] : []);
       const data = { shopId: shop.id, sellerUid: uid, name: name.trim(), description: desc.trim(), category: category.trim(), price: p,
-        stockQuantity: st, status, featured: status === "published" && featured, imageUrls: urls, thumbUrl: thumb, emoji: product?.emoji ?? "🛍️" };
+        stockQuantity: st, status, featured: status === "published" && featured, imageUrls: urls, thumbUrl: thumb, videoUrl, videoPoster, emoji: product?.emoji ?? "🛍️" };
       if (product) await updateDoc(ref, { ...data, updatedAt: serverTimestamp() });
       else await setDoc(ref, { ...data, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
-      await deleteImages([...removed, ...(product?.thumbUrl && product.thumbUrl !== thumb ? [product.thumbUrl] : [])]);
+      await deleteImages([...removed, ...(product?.thumbUrl && product.thumbUrl !== thumb ? [product.thumbUrl] : []), ...oldVideoFiles(urls)]);
       onDone(product ? "Changes saved" : status === "published" ? "Published" : "Saved as hidden");
     } catch (x) { setErr(errText(x)); setBusy(false); }
   }
@@ -67,6 +83,19 @@ export default function ProductForm({ shop, uid, product, categories, featuredCo
           <button type="button" aria-label="Remove photo" onClick={() => { setImages(images.filter((x) => x !== u)); setRemoved([...removed, u]); }}>×</button></div>)}
         {picks.map((k, i) => <div className="pv" key={k.url}><div className="tn">{/* eslint-disable-next-line @next/next/no-img-element */}<img src={k.url} alt="" /></div>
           <button type="button" aria-label="Remove photo" onClick={() => { URL.revokeObjectURL(k.url); setPicks(picks.filter((_, j) => j !== i)); }}>×</button></div>)}
+      </div>
+      <div className="vidbox">
+        {!video && !vidFile && <label className="drop"><b>🎬 Tap to add a video</b><span className="muted hint">Optional · one video · up to {MAX_VIDEO_SECONDS} seconds and {MAX_VIDEO_MB} MB</span>
+          <input type="file" accept={VIDEO_TYPES.join(",")} onChange={(e) => { pickVideo(e.target.files?.[0]); e.target.value = ""; }} /></label>}
+        {(video || vidFile) && (
+          <div className="vprev">
+            {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+            <video src={vidFile ? vidUrl : video!.url} poster={vidFile ? undefined : video!.poster ?? undefined} controls playsInline preload="metadata" />
+            <div className="pt"><b>{vidFile ? `New video: ${vidFile.name}` : "Product video"}</b>
+              <button type="button" className="btn alt sm" onClick={() => { setVidFile(null); setVideo(null); }} disabled={busy}>Remove video</button></div>
+          </div>
+        )}
+        {busy && vidFile && pct < 100 && <div role="status" aria-live="polite"><progress max={100} value={pct} style={{ width: "100%" }} /> <span className="muted hint">Uploading video… {pct}%</span></div>}
       </div>
       <label>Name <span className="muted hint">(optional if you add a photo)</span><input value={name} onChange={(e) => setName(e.target.value)} maxLength={120} /></label>
       <label>Price in ₦ <span className="muted hint">(leave empty to show “Ask for price”)</span><input inputMode="numeric" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="e.g. 15000" /></label>
