@@ -16,6 +16,7 @@ before(async () => {
   await env.withSecurityRulesDisabled(async (ctx) => {
     await setDoc(doc(ctx.firestore(), "shops/sA"), { ownerUid: "A", slug: "alpha", name: "Alpha", status: "active" });
     await setDoc(doc(ctx.firestore(), "shops/sB"), { ownerUid: "B", slug: "bravo", name: "Bravo", status: "active" });
+    await setDoc(doc(ctx.firestore(), "members/H"), { shopId: "sA", ownerUid: "A", email: "h@x.com" });   // a helper of shop A
     await uploadBytes(ref(ctx.storage(), "shops/sA/products/p1/seed.webp"), png, { contentType: "image/webp" });
     await uploadBytes(ref(ctx.storage(), "shops/sA/products/p1/seed2.webp"), png, { contentType: "image/webp" });
   });
@@ -55,3 +56,13 @@ test("storage: owner can upload a product video, others cannot, and wrong types 
   await assertFails(put(owner("A"), "shops/sA/products/p1/clip-4.mp4", new Uint8Array(40 * 1024 * 1024 + 1), "video/mp4"));
   await assertFails(put(owner("A"), "shops/sA/branding/clip.mp4", vid, "video/mp4")); // videos are for products only
 });
+
+test("a helper can upload and delete product photos of their own shop", async () => {
+  await assertSucceeds(put(owner("H"), "shops/sA/products/p9/h.webp"));
+  await assertSucceeds(deleteObject(ref(owner("H"), "shops/sA/products/p9/h.webp")));
+});
+test("a helper cannot change the logo or banner, and cannot touch another shop", async () => {
+  await assertFails(put(owner("H"), "shops/sA/branding/logo-1.webp"));
+  await assertFails(put(owner("H"), "shops/sB/products/p1/h.webp"));
+});
+test("a helper with an unverified email gets no access", async () => assertFails(put(owner("H", false), "shops/sA/products/p9/h2.webp")));

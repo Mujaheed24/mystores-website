@@ -6,10 +6,19 @@ service cloud.firestore {
     function isAdmin() { return signedIn() && request.auth.token.admin == true; }
     function shopDoc(shopId) { return get(/databases/$(database)/documents/shops/$(shopId)); }
     function ownsShop(shopId) { return signedIn() && shopDoc(shopId).data.ownerUid == request.auth.uid; }
+    // Team: an invited helper ("editor") has a record members/{uid} = { shopId }. Editors manage products and photos only.
+    // They cannot change shop settings, the team, ownership, status or plan, and cannot delete the shop.
+    function isMember(shopId) {
+      return signedIn() && request.auth.token.email_verified == true
+        && exists(/databases/$(database)/documents/members/$(request.auth.uid))
+        && get(/databases/$(database)/documents/members/$(request.auth.uid)).data.shopId == shopId;
+    }
+    function canEdit(shopId) { return ownsShop(shopId) || isMember(shopId); }
+    function lowerEmail() { return request.auth.token.email.lower(); }
     // Keep in sync with src/lib/slug.ts
     function validSlug(s) {
       return s is string && s.matches('^[a-z0-9-]{3,24}$')
-        && !(s in ['admin','dashboard','home','login','signup','api','shops','help','support','terms','privacy','sell']);
+        && !(s in ['admin','dashboard','home','login','signup','api','shops','help','support','terms','privacy','sell','join']);
     }
 
     // Optional shop info fields. Keep the state list in sync with src/lib/options.ts (NG_STATES).
@@ -68,6 +77,7 @@ service cloud.firestore {
       allow read: if (signedIn() && request.auth.uid == uid) || isAdmin();
       allow create: if signedIn() && request.auth.uid == uid
         && request.resource.data.keys().hasOnly(['shopId'])
+        && !exists(/databases/$(database)/documents/members/$(uid))
         && getAfter(/databases/$(database)/documents/shops/$(request.resource.data.shopId)).data.ownerUid == uid;
       allow update: if false;
       // The seller can remove their own record, but ONLY together with their shop (so nobody can open a second shop).
@@ -76,10 +86,28 @@ service cloud.firestore {
             && !existsAfter(/databases/$(database)/documents/shops/$(resource.data.shopId)));
     }
 
+    // Team members (helpers). Created by the invited person themselves, only when the owner invited their verified email address.
+    match /members/{uid} {
+      allow read: if (signedIn() && request.auth.uid == uid) || (signedIn() && resource.data.ownerUid == request.auth.uid) || isAdmin();
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.auth.token.email_verified == true
+        && request.resource.data.keys().hasOnly(['shopId', 'ownerUid', 'email', 'createdAt'])
+        && request.resource.data.shopId is string
+        && request.resource.data.ownerUid == shopDoc(request.resource.data.shopId).data.ownerUid
+        && request.resource.data.email == lowerEmail()
+        && request.resource.data.createdAt == request.time
+        && exists(/databases/$(database)/documents/shops/$(request.resource.data.shopId)/invites/$(lowerEmail()))
+        && !exists(/databases/$(database)/documents/owners/$(uid));
+      allow update: if false;
+      // The helper can leave; the owner can remove them.
+      allow delete: if isAdmin() || (signedIn() && request.auth.uid == uid) || (signedIn() && resource.data.ownerUid == request.auth.uid);
+    }
+
     match /shops/{shopId} {
       // Visitors see active shops only. Owners and admins also see their pending/suspended shops.
       allow read: if resource.data.status == 'active'
         || (signedIn() && resource.data.ownerUid == request.auth.uid)
+        || isMember(shopId)
         || isAdmin();
 
       // New shops start as pending, must own their slug, and cannot pick a plan.
@@ -118,7 +146,7 @@ service cloud.firestore {
       match /products/{productId} {
         function validProduct(d) {
           return d.shopId == shopId
-            && d.sellerUid == request.auth.uid
+            && d.sellerUid == shopDoc(shopId).data.ownerUid   // always the shop owner, also when a helper adds the product
             && d.name is string && d.name.size() <= 120
             && d.get('imageUrls', []) is list && d.get('imageUrls', []).size() <= 6
             && (d.get('thumbUrl', null) == null || (d.thumbUrl is string && d.thumbUrl.size() <= 800))
@@ -135,12 +163,12 @@ service cloud.firestore {
         }
         // Visitors: published products of active shops. Owner/admin: everything in their shop.
         allow read: if (resource.data.status == 'published' && shopDoc(shopId).data.status == 'active')
-          || ownsShop(shopId) || isAdmin();
-        allow create: if ownsShop(shopId) && validProduct(request.resource.data);
-        allow update: if ownsShop(shopId) && validProduct(request.resource.data)
+          || canEdit(shopId) || isAdmin();
+        allow create: if canEdit(shopId) && validProduct(request.resource.data);
+        allow update: if canEdit(shopId) && validProduct(request.resource.data)
           && request.resource.data.shopId == resource.data.shopId
           && request.resource.data.sellerUid == resource.data.sellerUid;
-        allow delete: if ownsShop(shopId) || isAdmin();
+        allow delete: if canEdit(shopId) || isAdmin();
       }
 
       // Seller statistics: one counter document per product, plus "_shop" for the shop page.
@@ -157,19 +185,33 @@ service cloud.firestore {
             && (statId == '_shop'
                 || get(/databases/$(database)/documents/shops/$(shopId)/products/$(statId)).data.status == 'published');
         }
-        allow read: if ownsShop(shopId) || isAdmin();
+        allow read: if canEdit(shopId) || isAdmin();
         allow create: if countable() && validStat(request.resource.data)
           && request.resource.data.views + request.resource.data.taps == 1;
         allow update: if countable() && validStat(request.resource.data)
           && request.resource.data.views >= resource.data.views
           && request.resource.data.taps >= resource.data.taps
           && (request.resource.data.views - resource.data.views) + (request.resource.data.taps - resource.data.taps) == 1;
-        allow delete: if ownsShop(shopId) || isAdmin();
+        allow delete: if canEdit(shopId) || isAdmin();
+      }
+
+      // Invitations to help with this shop. The document ID is the invited person's email address in lower case.
+      match /invites/{email} {
+        function invitee() { return signedIn() && request.auth.token.email_verified == true && lowerEmail() == email; }
+        allow read: if ownsShop(shopId) || invitee() || isAdmin();
+        allow create: if ownsShop(shopId)
+          && request.resource.data.keys().hasOnly(['email', 'shopName', 'createdAt'])
+          && request.resource.data.email == email && email == email.lower()
+          && email.size() <= 120 && email.matches('^[^@ ]+@[^@ ]+[.][^@ ]+$')
+          && request.resource.data.shopName is string && request.resource.data.shopName.size() <= 60
+          && request.resource.data.createdAt == request.time;
+        allow update: if false;
+        allow delete: if ownsShop(shopId) || invitee() || isAdmin();
       }
 
       // Orders are created by trusted server code only (Cloud Function). Sellers read and update their own.
       match /orders/{orderId} {
-        allow read: if ownsShop(shopId) || isAdmin();
+        allow read: if canEdit(shopId) || isAdmin();
         allow create: if false;
         allow update: if ownsShop(shopId)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['orderStatus', 'updatedAt'])

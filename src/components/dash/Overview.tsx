@@ -17,7 +17,7 @@ function CountUp({ to }: { to: number }) {
   return <>{v}</>;
 }
 
-export default function Overview({ shop, products, stats, go }: { shop: Shop; products: Product[]; stats: StatMap; go: (t: Tab) => void }) {
+export default function Overview({ shop, products, stats, go, canSettings = true }: { shop: Shop; products: Product[]; stats: StatMap; go: (t: Tab) => void; canSettings?: boolean }) {
   const [origin, setOrigin] = useState(""), [copied, setCopied] = useState(false);
   useEffect(() => setOrigin(window.location.origin), []);
   const url = `${origin}/${shop.slug}`, shown = origin ? url.replace(/^https?:\/\//, "") : `mystores.com.ng/${shop.slug}`;
@@ -33,7 +33,8 @@ export default function Overview({ shop, products, stats, go }: { shop: Shop; pr
     { t: "Add at least 3 products", done: products.length >= 3, tab: "Form" },
     { t: "Put a photo on every product", done: products.length > 0 && products.every((p) => p.imageUrls.length > 0), tab: "Products" },
   ];
-  const done = checks.filter((c) => c.done).length, pct = Math.round((done / checks.length) * 100);
+  const list = canSettings ? checks : checks.filter((c) => c.tab !== "Profile"); // helpers cannot open shop settings
+  const done = list.filter((c) => c.done).length, pct = Math.round((done / Math.max(1, list.length)) * 100);
   const copy = async () => { try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2200); } catch { /* ignore */ } };
   return (
     <>
@@ -65,10 +66,10 @@ export default function Overview({ shop, products, stats, go }: { shop: Shop; pr
           </>
         ) : <p className="muted" style={{ marginTop: 16 }}>No visits yet. Share your link and the numbers will appear here.</p>}
       </section>
-      {done < checks.length && <section className="card">
-        <h3>Get your shop ready</h3><p className="muted" style={{ margin: "4px 0 14px" }}>{done} of {checks.length} done</p>
+      {done < list.length && <section className="card">
+        <h3>Get your shop ready</h3><p className="muted" style={{ margin: "4px 0 14px" }}>{done} of {list.length} done</p>
         <div className="progress"><i style={{ width: `${pct}%` }} /></div>
-        {checks.map((c) => <button key={c.t} className={`check-i${c.done ? " done" : ""}`} onClick={() => go(c.tab)}><span className="c">{c.done && <IconCheck size={18} />}</span><span>{c.t}</span></button>)}
+        {list.map((c) => <button key={c.t} className={`check-i${c.done ? " done" : ""}`} onClick={() => go(c.tab)}><span className="c">{c.done && <IconCheck size={18} />}</span><span>{c.t}</span></button>)}
       </section>}
       <p className="muted" style={{ marginTop: 18, fontSize: 16 }}>Orders arrive on your WhatsApp. Website checkout is coming later.</p>
     </>

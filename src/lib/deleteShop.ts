@@ -1,5 +1,5 @@
 import { deleteUser, EmailAuthProvider, GoogleAuthProvider, reauthenticateWithCredential, reauthenticateWithPopup, type User } from "firebase/auth";
-import { collection, doc, getDoc, getDocs, writeBatch } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, query, where, writeBatch } from "firebase/firestore";
 import { deleteObject, listAll, ref, type StorageReference } from "firebase/storage";
 import { db, getStorageClient } from "./firebase";
 import type { Shop } from "./types";
@@ -25,6 +25,13 @@ async function removeCollection(path: string[]) {
   }
 }
 
+// Removes the shop's invitations and helper records (helpers lose access). Must run while the shop still exists.
+async function removeTeam(shopId: string) {
+  await removeCollection(["shops", shopId, "invites"]);
+  const m = await getDocs(query(collection(db, "members"), where("shopId", "==", shopId)));
+  if (m.docs.length) { const b = writeBatch(db); m.docs.forEach((d) => b.delete(d.ref)); await b.commit(); }
+}
+
 async function confirmIdentity(user: User, password?: string) {
   if (password !== undefined) await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email ?? "", password));
   else await reauthenticateWithPopup(user, new GoogleAuthProvider());
@@ -43,6 +50,7 @@ export async function deleteAccountOnly(user: User, progress: (msg: string) => v
 export async function adminDeleteShop(shop: Shop, progress: (msg: string) => void) {
   progress("Deleting photos…");
   await removeFolder(ref(getStorageClient(), `shops/${shop.id}`));
+  await removeTeam(shop.id).catch(() => {});
   progress("Deleting products, numbers and orders…");
   for (const c of ["products", "stats", "orders"]) await removeCollection(["shops", shop.id, c]);
   progress("Deleting the shop…");
@@ -58,6 +66,7 @@ export async function deleteShopAndAccount(user: User, shop: Shop, progress: (ms
   await confirmIdentity(user, password);
   progress("Deleting photos…");
   await removeFolder(ref(getStorageClient(), `shops/${shop.id}`));
+  await removeTeam(shop.id).catch(() => {});
   progress("Deleting products and numbers…");
   await removeCollection(["shops", shop.id, "products"]);
   await removeCollection(["shops", shop.id, "stats"]);

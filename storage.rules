@@ -7,6 +7,13 @@ service firebase.storage {
         && request.auth.token.email_verified == true
         && firestore.get(/databases/(default)/documents/shops/$(shopId)).data.ownerUid == request.auth.uid;
     }
+    // An invited helper (record members/{uid} in Firestore) may manage PRODUCT files only, never the logo and banner.
+    function isMember(shopId) {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && firestore.get(/databases/(default)/documents/members/$(request.auth.uid)).data.shopId == shopId;
+    }
+    function canEdit(shopId) { return ownsShop(shopId) || isMember(shopId); }
     // Images only, under 5 MB (the browser already compresses to WebP before upload).
     function okImage() {
       return request.resource.size < 5 * 1024 * 1024
@@ -23,8 +30,8 @@ service firebase.storage {
     // Product photos and videos: shops/{shopId}/products/{productId}/{file}
     match /shops/{shopId}/products/{productId}/{file} {
       allow read: if true;
-      allow create, update: if ownsShop(shopId) && (okImage() || okVideo()) && okName(file);
-      allow delete: if ownsShop(shopId) || isAdmin();
+      allow create, update: if canEdit(shopId) && (okImage() || okVideo()) && okName(file);
+      allow delete: if canEdit(shopId) || isAdmin();
     }
     // Logo and banner: shops/{shopId}/branding/{file}
     match /shops/{shopId}/branding/{file} {

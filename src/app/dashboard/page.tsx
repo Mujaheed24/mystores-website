@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { deleteDoc, doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import AuthForm from "@/components/AuthForm";
@@ -10,6 +10,7 @@ import Overview from "@/components/dash/Overview";
 import ProductCard from "@/components/dash/ProductCard";
 import QuickAdd from "@/components/dash/QuickAdd";
 import DeleteShop from "@/components/dash/DeleteShop";
+import Team from "@/components/dash/Team";
 import Profile from "@/components/dash/Profile";
 import ProductForm from "@/components/ProductForm";
 import { useAuth } from "@/lib/auth";
@@ -17,21 +18,22 @@ import { db } from "@/lib/firebase";
 import { deleteImages } from "@/lib/images";
 import { MAX_FEATURED } from "@/lib/options";
 import { CONTACT_EMAIL, CONTACT_WA_DIGITS } from "@/lib/contact";
-import { errText, getAllProducts, getMyShop } from "@/lib/seller";
+import { errText, getAllProducts, getWorkShop } from "@/lib/seller";
 import { deleteStat, getStats, type StatMap } from "@/lib/stats";
 import type { Product, Shop } from "@/lib/types";
 
 export default function Dashboard() {
   const { user, loading } = useAuth(), router = useRouter();
-  const [shop, setShop] = useState<Shop | null>(null), [products, setProducts] = useState<Product[]>([]), [stats, setStats] = useState<StatMap>({});
+  const [shop, setShop] = useState<Shop | null>(null), [role, setRole] = useState<"owner" | "editor">("owner"), [products, setProducts] = useState<Product[]>([]), [stats, setStats] = useState<StatMap>({});
   const [tab, setTab] = useState<Tab>("Home"), [editing, setEditing] = useState<Product | undefined>(), [toast, setToast] = useState(""), [ready, setReady] = useState(false), [dataReady, setDataReady] = useState(false), [back, setBack] = useState(""), [mode, setMode] = useState<"one" | "many">("one");
+  const roleRef = useRef<"owner" | "editor">("owner");
   const say = (t: string) => { setToast(t); setTimeout(() => setToast(""), 2600); };
   const load = useCallback(async (s: Shop) => {
     // products and numbers are fetched at the same time (faster than one after the other)
     const [pr, st] = await Promise.all([getAllProducts(s.id), getStats(s.id).catch(() => null)]); // numbers are a bonus: never block the dashboard
     setProducts(pr); if (st) setStats(st);
   }, []);
-  const goTab = (t: Tab) => { setEditing(undefined); setTab(t); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  const goTab = (t: Tab) => { setEditing(undefined); setTab(t === "Profile" && roleRef.current === "editor" ? "Home" : t); window.scrollTo({ top: 0, behavior: "smooth" }); };
 
   useEffect(() => { // links like /dashboard?tab=Profile open that tab directly
     const t = new URLSearchParams(window.location.search).get("tab");
@@ -49,7 +51,7 @@ export default function Dashboard() {
   }, [dataReady]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!user) return;
-    getMyShop(user.uid).then(async (s) => { if (!s) return router.replace("/sell"); setShop(s); setReady(true); await load(s); setDataReady(true); }).catch((e) => { say(errText(e)); setReady(true); setDataReady(true); }); // the page appears as soon as the shop is known; products fill in after
+    getWorkShop(user.uid).then(async (w) => { if (!w) return router.replace("/sell"); const s = w.shop; setRole(w.role); roleRef.current = w.role; if (w.role === "editor") setTab((t) => (t === "Profile" ? "Home" : t)); setShop(s); setReady(true); await load(s); setDataReady(true); }).catch((e) => { say(errText(e)); setReady(true); setDataReady(true); }); // the page appears as soon as the shop is known; products fill in after
   }, [user, router, load]);
 
   if (loading || (user && !ready)) return <main className="wrap" aria-busy="true"><div className="skel" style={{ height: 60, width: "60%" }} /><div className="skel" style={{ height: 170, margin: "20px 0" }} /><div className="skel" style={{ height: 220 }} /></main>;
@@ -66,6 +68,10 @@ export default function Dashboard() {
     if (!confirm(`Delete "${p.name}"? This cannot be undone.`)) return;
     try { await deleteDoc(doc(db, "shops", shop.id, "products", p.id)); setProducts((ps) => ps.filter((x) => x.id !== p.id)); await Promise.all([deleteStat(shop.id, p.id), deleteImages([...p.imageUrls, ...(p.thumbUrl ? [p.thumbUrl] : []), ...(p.videoUrl ? [p.videoUrl] : []), ...(p.videoPoster ? [p.videoPoster] : [])])]); say("Product deleted"); } catch (e) { say(errText(e)); }
   };
+  const leave = async () => {
+    if (!confirm("Leave this shop? You will no longer be able to edit it. The owner can invite you again.")) return;
+    try { await deleteDoc(doc(db, "members", user.uid)); router.replace("/"); } catch (e) { say(errText(e)); }
+  };
   const statusNote = shop.status === "active" ? null : shop.status === "pending"
     ? "Your shop is waiting for approval. Add your products now. Customers can see your shop once it is approved."
     : "Your shop is suspended and hidden from customers. Please contact support.";
@@ -78,7 +84,7 @@ export default function Dashboard() {
         <div><h1 style={{ fontSize: "clamp(32px,7vw,48px)", marginBottom: 10 }}>{shop.name}</h1><span className={`status ${shop.status}`}>{shop.status === "active" ? "Live" : shop.status === "pending" ? "Waiting for approval" : "Suspended"}</span></div>
         <div className="row">
           {shop.status === "active" && <Link className="btn sm" href={`/${shop.slug}`}>👁 View my shop</Link>}
-          <button type="button" className="btn alt sm" onClick={() => goTab("Profile")}>⚙ Shop settings</button>
+          {role === "owner" && <button type="button" className="btn alt sm" onClick={() => goTab("Profile")}>⚙ Shop settings</button>}
         </div>
       </div>
       {statusNote && <div className="note">{statusNote}
@@ -88,10 +94,11 @@ export default function Dashboard() {
         </div>}
       </div>}
       <InstallApp />
-      <BottomNav tab={tab} onTab={goTab} />
+      {role === "editor" && <div className="note">You are helping to run this shop. You can add and edit products and photos. Only the owner can change shop settings. <button type="button" className="linkbtn" onClick={leave}>Leave this shop</button></div>}
+      <BottomNav tab={tab} onTab={goTab} settings={role === "owner"} />
 
       {!dataReady && tab !== "Profile" && <div aria-busy="true" role="status" aria-label="Loading your products"><div className="skel" style={{ height: 150, marginBottom: 16 }} /><div className="skel" style={{ height: 120, marginBottom: 16 }} /><div className="skel" style={{ height: 200 }} /></div>}
-      {dataReady && tab === "Home" && <Overview shop={shop} products={products} stats={stats} go={goTab} />}
+      {dataReady && tab === "Home" && <Overview shop={shop} products={products} stats={stats} go={goTab} canSettings={role === "owner"} />}
 
       {dataReady && tab === "Products" && (products.length ? (
         <div className="plist">{products.map((p) => (
@@ -105,14 +112,14 @@ export default function Dashboard() {
         <>
           {!editing && <div className="seg" role="group" aria-label="How many products"><button aria-pressed={mode === "one"} onClick={() => setMode("one")}>One product</button><button aria-pressed={mode === "many"} onClick={() => setMode("many")}>Many photos</button></div>}
           {mode === "many" && !editing
-            ? <QuickAdd shop={shop} uid={user.uid} onDone={async (m) => { await load(shop); setTab("Products"); say(m); window.scrollTo({ top: 0 }); }} />
-            : <ProductForm key={editing?.id ?? "new"} shop={shop} uid={user.uid} product={editing} featuredCount={featuredCount}
+            ? <QuickAdd shop={shop} uid={shop.ownerUid} onDone={async (m) => { await load(shop); setTab("Products"); say(m); window.scrollTo({ top: 0 }); }} />
+            : <ProductForm key={editing?.id ?? "new"} shop={shop} uid={shop.ownerUid} product={editing} featuredCount={featuredCount}
                 categories={Array.from(new Set(products.map((p) => p.category)))}
                 onDone={async (m) => { await load(shop); setEditing(undefined); if (back) return router.push(back); setTab("Products"); say(m); window.scrollTo({ top: 0 }); }} onCancel={() => (back ? router.push(back) : goTab("Products"))} />}
         </>
       )}
 
-      {tab === "Profile" && <><Profile shop={shop} onSaved={(s) => { setShop(s); say("Shop saved"); }} /><DeleteShop shop={shop} /></>}
+      {tab === "Profile" && role === "owner" && <><Profile shop={shop} onSaved={(s) => { setShop(s); say("Shop saved"); }} /><Team shop={shop} /><DeleteShop shop={shop} /></>}
       <div className="dnav-pad" />
       {toast && <div className="toast" role="status">{toast}</div>}
     </main>

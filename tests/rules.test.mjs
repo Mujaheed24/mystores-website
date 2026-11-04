@@ -352,3 +352,104 @@ test("product small photo copy: a link is allowed, a non-text value is refused",
   await assertFails(setDoc(doc(db, "shops/sA/products/videobad"), { ...prod("sA", "A", "published"), videoUrl: 123 }));
   await assertFails(setDoc(doc(db, "shops/sA/products/videolong"), { ...prod("sA", "A", "published"), videoUrl: "https://x/" + "a".repeat(800) }));
 });
+
+// ---------------- Team: invited helpers ("editors") ----------------
+before(async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    const db = ctx.firestore();
+    await setDoc(doc(db, "shops/sP"), { whatsappNumber: WA, ownerUid: "P", slug: "papa", name: "Papa", status: "pending", subscriptionPlan: "basic" });
+    await setDoc(doc(db, "owners/A"), { shopId: "sA" });
+    await setDoc(doc(db, "members/M1"), { shopId: "sA", ownerUid: "A", email: "m1@x.com" });          // helper of shop A
+    await setDoc(doc(db, "members/M2"), { shopId: "sP", ownerUid: "P", email: "m2@x.com" });          // helper of the pending shop P
+    await setDoc(doc(db, "shops/sA/invites/new@x.com"), { email: "new@x.com", shopName: "Alpha" });
+    await setDoc(doc(db, "shops/sB/invites/other@x.com"), { email: "other@x.com", shopName: "Bravo" });
+    await setDoc(doc(db, "shops/sA/stats/_shop"), { views: 3, taps: 1 });
+  });
+});
+const mail = (uid, email, verified = true) => env.authenticatedContext(uid, { email_verified: verified, email }).firestore();
+const helper = () => mail("M1", "m1@x.com");
+
+test("helper can add a product to the shop (sellerUid stays the owner), edit it and delete it", async () => {
+  const db = helper();
+  await assertSucceeds(setDoc(doc(db, "shops/sA/products/h1"), prod("sA", "A", "published")));
+  await assertSucceeds(updateDoc(doc(db, "shops/sA/products/h1"), { price: 250 }));
+  await assertSucceeds(deleteDoc(doc(db, "shops/sA/products/h1")));
+});
+test("helper cannot put their own id as sellerUid", async () =>
+  assertFails(setDoc(doc(helper(), "shops/sA/products/h2"), prod("sA", "M1", "published"))));
+test("helper can read drafts and numbers of their shop, and the shop while it is pending", async () => {
+  await assertSucceeds(getDoc(doc(helper(), "shops/sA/products/dr")));
+  await assertSucceeds(getDoc(doc(helper(), "shops/sA/stats/_shop")));
+  await assertSucceeds(getDoc(doc(mail("M2", "m2@x.com"), "shops/sP")));
+});
+test("helper cannot touch another shop", async () => {
+  const db = helper();
+  await assertFails(setDoc(doc(db, "shops/sB/products/x"), prod("sB", "B", "published")));
+  await assertFails(getDoc(doc(db, "shops/sP")));
+});
+test("helper cannot change shop settings, delete the shop or invite people", async () => {
+  const db = helper();
+  await assertFails(updateDoc(doc(db, "shops/sA"), { name: "Hacked" }));
+  await assertFails(deleteDoc(doc(db, "shops/sA")));
+  await assertFails(setDoc(doc(db, "shops/sA/invites/friend@x.com"), { email: "friend@x.com", shopName: "Alpha", createdAt: serverTimestamp() }));
+  await assertFails(updateDoc(doc(db, "shops/sA/orders/o1"), { orderStatus: "confirmed", updatedAt: serverTimestamp() }));
+});
+test("a helper with an unverified email gets no access", async () =>
+  assertFails(setDoc(doc(mail("M1", "m1@x.com", false), "shops/sA/products/h3"), prod("sA", "A", "published"))));
+test("a stranger cannot read drafts or numbers", async () => {
+  await assertFails(getDoc(doc(as("Z"), "shops/sA/products/dr")));
+  await assertFails(getDoc(doc(as("Z"), "shops/sA/stats/_shop")));
+});
+
+test("owner can invite by email; bad addresses, other people and mismatched ids are refused", async () => {
+  await assertSucceeds(setDoc(doc(as("A"), "shops/sA/invites/ok@x.com"), { email: "ok@x.com", shopName: "Alpha", createdAt: serverTimestamp() }));
+  await assertFails(setDoc(doc(as("A"), "shops/sA/invites/notanemail"), { email: "notanemail", shopName: "Alpha", createdAt: serverTimestamp() }));
+  await assertFails(setDoc(doc(as("A"), "shops/sA/invites/Cap@x.com"), { email: "Cap@x.com", shopName: "Alpha", createdAt: serverTimestamp() }));
+  await assertFails(setDoc(doc(as("A"), "shops/sA/invites/a@x.com"), { email: "b@x.com", shopName: "Alpha", createdAt: serverTimestamp() }));
+  await assertFails(setDoc(doc(as("B"), "shops/sA/invites/b@x.com"), { email: "b@x.com", shopName: "Alpha", createdAt: serverTimestamp() }));
+});
+test("only the owner and the invited person can read an invitation", async () => {
+  await assertSucceeds(getDoc(doc(as("A"), "shops/sA/invites/new@x.com")));
+  await assertSucceeds(getDoc(doc(mail("N", "New@X.com"), "shops/sA/invites/new@x.com")));
+  await assertFails(getDoc(doc(mail("Z", "z@x.com"), "shops/sA/invites/new@x.com")));
+  await assertFails(getDoc(doc(mail("N", "new@x.com", false), "shops/sA/invites/new@x.com")));
+});
+test("invited person can accept: joins and the invitation is removed in one batch", async () => {
+  const db = mail("N", "new@x.com"), b = writeBatch(db);
+  b.set(doc(db, "members/N"), { shopId: "sA", ownerUid: "A", email: "new@x.com", createdAt: serverTimestamp() });
+  b.delete(doc(db, "shops/sA/invites/new@x.com"));
+  await assertSucceeds(b.commit());
+  await assertSucceeds(setDoc(doc(db, "shops/sA/products/byN"), prod("sA", "A", "draft")));
+});
+test("nobody can join without an invitation, with someone else's email, or for another shop", async () => {
+  await assertFails(setDoc(doc(mail("Q", "q@x.com"), "members/Q"), { shopId: "sA", ownerUid: "A", email: "q@x.com", createdAt: serverTimestamp() }));
+  await assertFails(setDoc(doc(mail("R", "r@x.com"), "members/R"), { shopId: "sB", ownerUid: "B", email: "new@x.com", createdAt: serverTimestamp() }));
+  await assertFails(setDoc(doc(mail("R", "other@x.com"), "members/R"), { shopId: "sA", ownerUid: "A", email: "other@x.com", createdAt: serverTimestamp() })); // the invite is for shop B
+  await assertFails(setDoc(doc(mail("S2", "other@x.com"), "members/R"), { shopId: "sB", ownerUid: "B", email: "other@x.com", createdAt: serverTimestamp() })); // someone else's uid
+});
+test("a shop owner cannot also become a helper, and a helper cannot open a shop", async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => { await setDoc(doc(ctx.firestore(), "shops/sA/invites/a@x.com"), { email: "a@x.com", shopName: "Alpha" }); });
+  await assertFails(setDoc(doc(mail("A", "a@x.com"), "members/A"), { shopId: "sA", ownerUid: "A", email: "a@x.com", createdAt: serverTimestamp() }));
+  const db = mail("M1", "m1@x.com"), b = writeBatch(db);
+  b.set(doc(db, "shops/sM"), { whatsappNumber: WA, ownerUid: "M1", slug: "mike", name: "Mike", status: "pending", subscriptionPlan: "basic" });
+  b.set(doc(db, "slugs/mike"), { shopId: "sM", ownerUid: "M1" });
+  b.set(doc(db, "owners/M1"), { shopId: "sM" });
+  await assertFails(b.commit());
+});
+test("owner can list and remove helpers; a helper can leave; others cannot", async () => {
+  await assertSucceeds(getDocs(query(collection(as("A"), "members"), where("ownerUid", "==", "A"))));
+  await assertFails(getDocs(query(collection(as("B"), "members"), where("ownerUid", "==", "A"))));
+  await assertFails(deleteDoc(doc(as("B"), "members/M1")));
+  await assertFails(updateDoc(doc(helper(), "members/M1"), { shopId: "sB" }));
+  await assertFails(setDoc(doc(mail("R", "new@x.com"), "members/R"), { shopId: "sA", ownerUid: "R", email: "new@x.com", createdAt: serverTimestamp() })); // cannot claim to be the owner
+  await assertSucceeds(deleteDoc(doc(as("A"), "members/M1")));
+  await assertFails(setDoc(doc(helper(), "shops/sA/products/after"), prod("sA", "A", "published"))); // access ends at once
+  await assertSucceeds(deleteDoc(doc(mail("M2", "m2@x.com"), "members/M2")));                       // leaving
+});
+test("the address 'join' is reserved", async () => {
+  const db = as("J"), b = writeBatch(db);
+  b.set(doc(db, "shops/sJ"), { whatsappNumber: WA, ownerUid: "J", slug: "join", name: "Join", status: "pending", subscriptionPlan: "basic" });
+  b.set(doc(db, "slugs/join"), { shopId: "sJ", ownerUid: "J" });
+  b.set(doc(db, "owners/J"), { shopId: "sJ" });
+  await assertFails(b.commit());
+});
