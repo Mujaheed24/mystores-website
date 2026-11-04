@@ -8,6 +8,8 @@ import { errText } from "@/lib/seller";
 import type { Product, Shop } from "@/lib/types";
 
 type Pick = { f: File; url: string };
+// Video upload is switched off by default. Set NEXT_PUBLIC_ENABLE_VIDEO=true (Vercel environment variables, then redeploy) to allow it.
+const VIDEO_ON = process.env.NEXT_PUBLIC_ENABLE_VIDEO === "true";
 
 // Photo first. Name and price are optional: a product needs at least a photo OR a name.
 export default function ProductForm({ shop, uid, product, categories, featuredCount, onDone, onCancel }: {
@@ -84,8 +86,8 @@ export default function ProductForm({ shop, uid, product, categories, featuredCo
         {picks.map((k, i) => <div className="pv" key={k.url}><div className="tn">{/* eslint-disable-next-line @next/next/no-img-element */}<img src={k.url} alt="" /></div>
           <button type="button" aria-label="Remove photo" onClick={() => { URL.revokeObjectURL(k.url); setPicks(picks.filter((_, j) => j !== i)); }}>×</button></div>)}
       </div>
-      <div className="vidbox">
-        {!video && !vidFile && <label className="drop"><b>🎬 Tap to add a video</b><span className="muted hint">Optional · one video · up to {MAX_VIDEO_SECONDS} seconds and {MAX_VIDEO_MB} MB</span>
+      {(VIDEO_ON || video || vidFile) && <div className="vidbox">
+        {!video && !vidFile && VIDEO_ON && <label className="drop"><b>🎬 Tap to add a video</b><span className="muted hint">Optional · one video · up to {MAX_VIDEO_SECONDS} seconds and {MAX_VIDEO_MB} MB</span>
           <input type="file" accept={VIDEO_TYPES.join(",")} onChange={(e) => { pickVideo(e.target.files?.[0]); e.target.value = ""; }} /></label>}
         {(video || vidFile) && (
           <div className="vprev">
@@ -96,7 +98,7 @@ export default function ProductForm({ shop, uid, product, categories, featuredCo
           </div>
         )}
         {busy && vidFile && pct < 100 && <div role="status" aria-live="polite"><progress max={100} value={pct} style={{ width: "100%" }} /> <span className="muted hint">Uploading video… {pct}%</span></div>}
-      </div>
+      </div>}
       <label>Name <span className="muted hint">(optional if you add a photo)</span><input value={name} onChange={(e) => setName(e.target.value)} maxLength={120} /></label>
       <label>Price in ₦ <span className="muted hint">(leave empty to show “Ask for price”)</span><input inputMode="numeric" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="e.g. 15000" /></label>
       <label>Category <span className="muted hint">(optional, helps customers filter your shop)</span>

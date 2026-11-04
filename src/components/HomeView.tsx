@@ -18,7 +18,7 @@ const PERKS = [["📱", "Works on any phone"], ["🔗", "Your own shop link"], [
 
 const toDir = (s: Shop): DirShop => ({ id: s.id, slug: s.slug, name: s.name, category: s.category, categories: s.categories, description: s.description, themeColor: s.themeColor, logoUrl: s.logoUrl, bannerUrl: s.bannerUrl, state: s.state, city: s.city, locations: s.locations });
 
-export default function HomeView({ shops }: { shops: Shop[] }) {
+export default function HomeView({ shops, failed = false }: { shops: Shop[]; failed?: boolean }) {
   return (
     <main className="wrap">
       <section className="hero">
@@ -54,7 +54,7 @@ export default function HomeView({ shops }: { shops: Shop[] }) {
 
       <section className="sec" id="shops">
         <Reveal><h2>Shops on MyStores</h2><p className="muted">Tap a shop to visit it.</p></Reveal>
-        <ShopDirectory shops={shops.map(toDir)} />
+        <ShopDirectory shops={shops.map(toDir)} failed={failed} />
       </section>
 
       <Reveal>
