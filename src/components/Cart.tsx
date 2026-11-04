@@ -67,12 +67,27 @@ function Sheet({ onClose }: { onClose: () => void }) {
   }, [onClose]);
   const priced = lines.filter((l) => l.price !== null), total = priced.reduce((n, l) => n + (l.price as number) * l.qty, 0), unpriced = lines.length - priced.length;
   const wa = shop.whatsapp.replace(/\D/g, "");
-  function href() {
-    const withLinks = lines.length <= 6, origin = location.origin;
-    const rows = lines.map((l, i) => `${i + 1}. ${l.name || "Item (see photo)"} x${l.qty}${l.price !== null ? ` - ${naira(l.price * l.qty)}` : " - ask price"}${withLinks ? `\n   ${origin}/${shop.slug}/p/${l.id}` : ""}`);
-    const tail = `${priced.length ? `\nTotal: ${naira(total)}${unpriced ? ` (+ ${unpriced} to confirm)` : ""}` : ""}`;
-    return `https://wa.me/${wa}?text=${encodeURIComponent(`Hello ${shop.name}, I would like to order:\n\n${rows.join("\n")}${tail}\n\nPlease confirm availability, delivery and payment.`)}`;
+  // WhatsApp links break when the message is too long, so we add a product link to as many lines as fit (earliest lines first),
+  // never a fixed number. Names are shortened for big orders. The "Copy order" button has no length limit at all.
+  const URL_BUDGET = 3000; // characters of the encoded wa.me address; safe for phones and WhatsApp Web
+  function build(nameMax: number, linkCount: number) {
+    const origin = location.origin;
+    const rows = lines.map((l, i) => {
+      const nm = (l.name || "Item (see photo)").slice(0, nameMax);
+      return `${i + 1}. ${nm} x${l.qty}${l.price !== null ? ` - ${naira(l.price * l.qty)}` : " - ask price"}${i < linkCount ? `\n   ${origin}/${shop.slug}/p/${l.id}` : ""}`;
+    });
+    const tail = priced.length ? `\nTotal: ${naira(total)}${unpriced ? ` (+ ${unpriced} to confirm)` : ""}` : "";
+    return `Hello ${shop.name}, I would like to order:\n\n${rows.join("\n")}${tail}\n\nPlease confirm availability, delivery and payment.`;
   }
+  function message() {
+    for (const nameMax of [60, 30]) for (let n = lines.length; n >= 0; n--) { const m = build(nameMax, n); if (encodeURIComponent(m).length <= URL_BUDGET) return m; }
+    return build(30, 0);
+  }
+  function fullMessage() { return build(120, lines.length); }
+  const href = () => `https://wa.me/${wa}?text=${encodeURIComponent(message())}`;
+  const [copied, setCopied] = useState(false);
+  const tooLong = lines.length > 0 && typeof location !== "undefined" && encodeURIComponent(build(60, lines.length)).length > URL_BUDGET;
+  async function copy() { try { await navigator.clipboard.writeText(fullMessage()); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch { prompt("Copy your order:", fullMessage()); } }
   return (
     <div className="lb cartwrap" role="dialog" aria-modal="true" aria-label="Your order" onClick={onClose}>
       <div className="cartsheet" onClick={(e) => e.stopPropagation()}>
@@ -98,6 +113,8 @@ function Sheet({ onClose }: { onClose: () => void }) {
           {unpriced > 0 && priced.length > 0 && <p className="muted hint">{unpriced} item{unpriced > 1 ? "s have" : " has"} no price yet. The seller will confirm it.</p>}
           <p className="muted hint">This sends your list to {shop.name} on WhatsApp. You pay and arrange delivery with the seller.</p>
           {wa && <a className="btn wa" href={href()} onClick={() => t.count("taps")}><IconChat /> Send order on WhatsApp</a>}
+          {tooLong && <p className="muted hint">Big order: product links are added to the first items only. Tap “Copy full order with all links” and paste it into your WhatsApp chat with {shop.name} to include every link.</p>}
+          {tooLong && <button type="button" className="btn alt sm" style={{ marginTop: 10 }} onClick={copy}>{copied ? "✓ Copied" : "Copy full order with all links"}</button>}
           <button type="button" className="btn alt sm" style={{ marginTop: 10 }} onClick={() => { if (confirm("Clear your whole order?")) cart.clear(); }}>Clear order</button>
         </>}
       </div>

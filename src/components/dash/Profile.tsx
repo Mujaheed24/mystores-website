@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import { doc, serverTimestamp, updateDoc } from "firebase/firestore";
+import { deleteField, doc, serverTimestamp, updateDoc } from "firebase/firestore";
+import AccountSettings from "./AccountSettings";
 import ColorPicker from "../ColorPicker";
 import { db } from "@/lib/firebase";
 import { compressImage, deleteImages, uploadBrandImage } from "@/lib/images";
@@ -9,16 +10,18 @@ import { errText } from "@/lib/seller";
 import type { Shop } from "@/lib/types";
 
 // A picture chooser: shows the current (or newly chosen) picture, with one clear button to change it.
-function PicPick({ title, hint, current, file, onFile, wide }: { title: string; hint: string; current?: string; file: File | null; onFile: (f: File | null) => void; wide?: boolean }) {
+function PicPick({ title, hint, current, file, onFile, wide, removed, onRemove }: { title: string; hint: string; current?: string; file: File | null; onFile: (f: File | null) => void; wide?: boolean; removed: boolean; onRemove: (v: boolean) => void }) {
   const [url, setUrl] = useState("");
   useEffect(() => { if (!file) return setUrl(""); const u = URL.createObjectURL(file); setUrl(u); return () => URL.revokeObjectURL(u); }, [file]);
-  const src = url || current;
+  const src = url || (removed ? undefined : current);
   return (
     <div className={`pick${wide ? " wide" : ""}`}>
       <div className="pv2">{src ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={src} alt="" /> : <span aria-hidden="true">🖼️</span>}</div>
       <div className="pt"><b>{title}</b><span className="muted hint">{file ? `New: ${file.name}` : hint}</span>
-        <label className="btn alt sm">{src ? "Change" : "Choose a photo"}<input className="sr" type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => { onFile(e.target.files?.[0] ?? null); e.target.value = ""; }} /></label>
+        <label className="btn alt sm">{src ? "Change" : "Choose a photo"}<input className="sr" type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => { onFile(e.target.files?.[0] ?? null); onRemove(false); e.target.value = ""; }} /></label>
         {file && <button type="button" className="linkbtn" onClick={() => onFile(null)}>Undo</button>}
+        {!file && current && !removed && <button type="button" className="linkbtn rmpic" onClick={() => onRemove(true)}>Remove {title.toLowerCase()}</button>}
+        {removed && <span className="muted hint">Will be removed when you save. <button type="button" className="linkbtn" onClick={() => onRemove(false)}>Undo</button></span>}
       </div>
     </div>
   );
@@ -28,7 +31,7 @@ export default function Profile({ shop, onSaved }: { shop: Shop; onSaved: (s: Sh
   const [name, setName] = useState(shop.name), [desc, setDesc] = useState(shop.description), [wa, setWa] = useState(shop.whatsappNumber), [color, setColor] = useState(shop.themeColor);
   const [cats, setCats] = useState<string[]>(shopCategories(shop)), [places, setPlaces] = useState<{ state: string; city: string }[]>(shop.locations ?? []);
   const [state, setState] = useState(shop.state ?? ""), [city, setCity] = useState(shop.city ?? ""), [hours, setHours] = useState(shop.openingHours ?? ""), [delivery, setDelivery] = useState(shop.deliveryNotes ?? "");
-  const [logo, setLogo] = useState<File | null>(null), [banner, setBanner] = useState<File | null>(null), [err, setErr] = useState(""), [busy, setBusy] = useState(false);
+  const [logo, setLogo] = useState<File | null>(null), [banner, setBanner] = useState<File | null>(null), [noLogo, setNoLogo] = useState(false), [noBanner, setNoBanner] = useState(false), [err, setErr] = useState(""), [busy, setBusy] = useState(false);
   async function save(e: React.FormEvent) {
     e.preventDefault(); setErr("");
     if (!name.trim()) return setErr("Enter your shop name.");
@@ -45,13 +48,20 @@ export default function Profile({ shop, onSaved }: { shop: Shop; onSaved: (s: Sh
         logo && (async () => { if (shop.logoUrl) old.push(shop.logoUrl); d.logoUrl = await uploadBrandImage(shop.id, "logo", await compressImage(logo, 800)); })(),
         banner && (async () => { if (shop.bannerUrl) old.push(shop.bannerUrl); d.bannerUrl = await uploadBrandImage(shop.id, "banner", await compressImage(banner, 2000)); })(),
       ]);
-      await updateDoc(doc(db, "shops", shop.id), { ...d, updatedAt: serverTimestamp() });
-      deleteImages(old); setWa(phone); setLogo(null); setBanner(null); onSaved({ ...shop, ...d });
+      // "Remove" deletes the field; a newly chosen picture wins over a pending removal
+      const gone: Record<string, unknown> = {};
+      if (noLogo && !logo && shop.logoUrl) { gone.logoUrl = deleteField(); old.push(shop.logoUrl); }
+      if (noBanner && !banner && shop.bannerUrl) { gone.bannerUrl = deleteField(); old.push(shop.bannerUrl); }
+      await updateDoc(doc(db, "shops", shop.id), { ...d, ...gone, updatedAt: serverTimestamp() });
+      deleteImages(old); setWa(phone); setLogo(null); setBanner(null); setNoLogo(false); setNoBanner(false);
+      const next: Shop = { ...shop, ...d }; if (gone.logoUrl) delete next.logoUrl; if (gone.bannerUrl) delete next.bannerUrl;
+      onSaved(next);
     } catch (x) { setErr(errText(x)); }
     setBusy(false);
   }
   const setPlace = (i: number, v: Partial<{ state: string; city: string }>) => setPlaces(places.map((y, j) => (j === i ? { ...y, ...v } : y)));
   return (
+    <>
     <form className="fsecs" onSubmit={save}>
       <section className="card fsec f" aria-labelledby="s1">
         <h3 id="s1">1 · About your shop</h3>
@@ -87,8 +97,8 @@ export default function Profile({ shop, onSaved }: { shop: Shop; onSaved: (s: Sh
 
       <section className="card fsec f" aria-labelledby="s4">
         <h3 id="s4">4 · How your shop looks</h3>
-        <PicPick title="Logo" hint="Square works best" current={shop.logoUrl} file={logo} onFile={setLogo} />
-        <PicPick title="Banner" hint="A wide photo, shown behind your shop name" current={shop.bannerUrl} file={banner} onFile={setBanner} wide />
+        <PicPick title="Logo" hint="Square works best" current={shop.logoUrl} file={logo} onFile={setLogo} removed={noLogo} onRemove={setNoLogo} />
+        <PicPick title="Banner" hint="A wide photo, shown behind your shop name" current={shop.bannerUrl} file={banner} onFile={setBanner} wide removed={noBanner} onRemove={setNoBanner} />
         <div className="lab">Shop colour<ColorPicker value={color} onChange={setColor} /></div>
         <div className="mini"><div className="bn" style={{ backgroundColor: color }}><span>{cats.map((c) => CATEGORY_EMOJI[c]).join(" ")} {cats.join(", ")}</span><b>{name || "Your shop"}</b></div><div className="bd">mystores.com.ng/{shop.slug}</div></div>
       </section>
@@ -98,5 +108,7 @@ export default function Profile({ shop, onSaved }: { shop: Shop; onSaved: (s: Sh
         <button className="btn" disabled={busy} aria-busy={busy}>{busy ? "Saving…" : "Save changes"}</button>
       </div>
     </form>
+    <AccountSettings />
+    </>
   );
 }

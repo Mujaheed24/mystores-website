@@ -8,7 +8,10 @@ const bad = [];
 const check = async (path, why) => {
   try {
     const { status, body } = await get(path);
-    const closed = body.includes("This shop is not open") || body.includes("could not be found");
+    // Only trust the page <title> (the missing-shop and missing-product pages set "Shop unavailable" / "Product unavailable").
+    // Searching the whole body gives false alarms: Next.js embeds the not-found text in the data of EVERY page.
+    const title = (body.match(/<title[^>]*>([^<]*)<\/title>/i) || [])[1] || "";
+    const closed = /unavailable|not found/i.test(title);
     if (status !== 200 || closed) bad.push(`${path}  (${why}) -> ${status}${closed ? ", shows 'not open'" : ""}`);
     return status === 200 && !closed;
   } catch (e) { bad.push(`${path}  (${why}) -> ${e.message}`); return false; }

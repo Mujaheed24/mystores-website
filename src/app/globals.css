@@ -37,8 +37,8 @@ button,input,select,textarea{font:inherit;color:inherit}button{cursor:pointer;-w
 .note{background:color-mix(in srgb,var(--accent) 22%,var(--surface));border:1px solid color-mix(in srgb,var(--accent) 60%,var(--line));border-radius:var(--r-sm);padding:14px 18px;font-size:16px;font-weight:600;margin:0 0 18px}
 .skel{border-radius:var(--r);background:linear-gradient(100deg,var(--line) 30%,color-mix(in srgb,var(--line) 40%,var(--surface)) 50%,var(--line) 70%);background-size:300% 100%;animation:shimmer 1.4s linear infinite}
 @keyframes shimmer{from{background-position:100% 0}to{background-position:-100% 0}}
-.boot{position:fixed;inset:0;display:grid;place-items:center;background:var(--brand);z-index:15}
-.boot i{width:22px;height:22px;border-radius:50%;background:#fff;animation:beat .9s ease-in-out infinite}
+.boot{position:fixed;inset:0;display:grid;place-items:center;background:var(--bg);z-index:15}
+.boot i{width:22px;height:22px;border-radius:50%;background:var(--brand);animation:beat .9s ease-in-out infinite}
 @keyframes beat{0%,100%{transform:scale(.6);opacity:.6}50%{transform:scale(1.4);opacity:1}}
 
 /* ---------- scroll reveal ---------- */
@@ -384,3 +384,11 @@ html.theming *,html.theming *::before,html.theming *::after{transition:backgroun
 @keyframes okpop{from{transform:scale(.3);opacity:0}60%{transform:scale(1.12);opacity:1}to{transform:scale(1)}}
 @keyframes okring{to{box-shadow:0 0 0 26px transparent}}
 @media (prefers-reduced-motion:reduce){.okmark{animation:none}}
+
+/* banner: long descriptions and many categories/places stay tidy */
+.clamp3{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.morebtn{background:none;border:0;color:#fff;font:inherit;font-weight:800;font-size:16px;text-decoration:underline;min-height:44px;padding:0;cursor:pointer}
+.morebtn:focus-visible{outline:3px solid #fff;outline-offset:2px;border-radius:6px}
+button.pill.more{cursor:pointer;font-family:inherit;color:var(--ink);border-style:dashed;min-height:44px}
+.meta .pill{min-width:0;overflow-wrap:anywhere}
+.splash p{max-width:90vw;margin-inline:auto;overflow-wrap:anywhere}
