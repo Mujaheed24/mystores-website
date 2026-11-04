@@ -54,9 +54,12 @@ export default function ProductGrid({ slug, shopName, whatsapp, products }: { sl
             <button type="button" className={`fbtn${filtersOn ? " on" : ""}`} aria-expanded={panel} aria-controls="filters" onClick={() => setPanel(!panel)}>⚙ Filters{filtersOn ? <b>{filtersOn}</b> : null}</button>
           </div>
           {cats.length > 1 && (
-            <div className="chips" role="group" aria-label="Categories">
-              <button className="chip" aria-pressed={cat === "all"} onClick={() => setCat("all")}>All <span className="cn">{products.length}</span></button>
-              {cats.map((c) => <button key={c.key} className="chip" aria-pressed={cat === c.key} onClick={() => setCat(cat === c.key ? "all" : c.key)}>{c.label} <span className="cn">{c.n}</span></button>)}
+            <div className="catsel">
+              <label htmlFor="catsel" className="sr">Category</label>
+              <select id="catsel" value={cat} onChange={(e) => setCat(e.target.value)}>
+                <option value="all">All categories ({products.length})</option>
+                {cats.map((c) => <option key={c.key} value={c.key}>{c.label} ({c.n})</option>)}
+              </select>
             </div>
           )}
           {panel && (

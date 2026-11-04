@@ -21,7 +21,7 @@ export default function ProductForm({ shop, uid, product, categories, featuredCo
   const [picks, setPicks] = useState<Pick[]>([]), [removed, setRemoved] = useState<string[]>([]), [err, setErr] = useState(""), [busy, setBusy] = useState(false);
   // video: the one already saved (if any), or a new one just chosen
   const [video, setVideo] = useState<{ url: string; poster: string | null } | null>(product?.videoUrl ? { url: product.videoUrl, poster: product.videoPoster ?? null } : null);
-  const [vidFile, setVidFile] = useState<File | null>(null), [vidUrl, setVidUrl] = useState(""), [pct, setPct] = useState(0);
+  const [custom, setCustom] = useState(false), [vidFile, setVidFile] = useState<File | null>(null), [vidUrl, setVidUrl] = useState(""), [pct, setPct] = useState(0);
   useEffect(() => { if (!vidFile) return setVidUrl(""); const u = URL.createObjectURL(vidFile); setVidUrl(u); return () => URL.revokeObjectURL(u); }, [vidFile]);
   async function pickVideo(f: File | undefined) {
     if (!f) return; setErr("");
@@ -99,9 +99,13 @@ export default function ProductForm({ shop, uid, product, categories, featuredCo
       </div>
       <label>Name <span className="muted hint">(optional if you add a photo)</span><input value={name} onChange={(e) => setName(e.target.value)} maxLength={120} /></label>
       <label>Price in ₦ <span className="muted hint">(leave empty to show “Ask for price”)</span><input inputMode="numeric" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="e.g. 15000" /></label>
-      <label>Category <span className="muted hint">(optional, helps customers filter your shop)</span><input list="cats" value={category} maxLength={40} onChange={(e) => setCategory(e.target.value)} placeholder="e.g. Sandals" />
-        <datalist id="cats">{sugg.map((c) => <option key={c} value={c} />)}</datalist></label>
-      {sugg.length > 0 && <div className="chips wrapchips" role="group" aria-label="Pick a category" style={{ marginTop: -8 }}>{sugg.map((c) => <button type="button" key={c} className="chip" aria-pressed={category.trim().toLowerCase() === c.toLowerCase()} onClick={() => setCategory(category.trim().toLowerCase() === c.toLowerCase() ? "" : c)}>{c}</button>)}</div>}
+      <label>Category <span className="muted hint">(optional, helps customers filter your shop)</span>
+        <select value={custom ? "__new" : sugg.find((c) => c.toLowerCase() === category.trim().toLowerCase()) ?? ""} onChange={(e) => { const v = e.target.value; if (v === "__new") { setCustom(true); setCategory(""); } else { setCustom(false); setCategory(v); } }}>
+          <option value="">No category</option>
+          {sugg.map((c) => <option key={c} value={c}>{c}</option>)}
+          <option value="__new">+ New category…</option>
+        </select></label>
+      {custom && <label>New category name<input value={category} maxLength={40} onChange={(e) => setCategory(e.target.value)} placeholder="e.g. Sandals" autoFocus /></label>}
       <label>How many do you have?<input inputMode="numeric" value={stock} onChange={(e) => setStock(e.target.value)} /></label>
       <label>Description <span className="muted hint">(optional)</span><textarea value={desc} onChange={(e) => setDesc(e.target.value)} /></label>
       <label>Status<select value={status} onChange={(e) => setStatus(e.target.value as "draft" | "published")}>

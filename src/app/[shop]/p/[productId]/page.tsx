@@ -39,7 +39,7 @@ export default async function ProductPage({ params }: { params: Promise<{ shop: 
   const low = p.stockQuantity > 0 && p.stockQuantity < 5;
   return (
     <CartProvider shop={{ id: shop.id, slug: shop.slug, name: shop.name, whatsapp: shop.whatsappNumber, ownerUid: shop.ownerUid }}>
-      <OwnerBar ownerUid={shop.ownerUid} />
+      <OwnerBar ownerUid={shop.ownerUid} product={{ id: p.id, path: `/${shop.slug}/p/${p.id}` }} />
       <main className="wrap" style={{ ["--sa" as string]: shop.themeColor, paddingBottom: 150 }}>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
           "@context": "https://schema.org", "@type": "Product", name: p.name || `${p.category || "Item"} at ${shop.name}`, description: p.description || p.name || shop.name, image: p.imageUrls,

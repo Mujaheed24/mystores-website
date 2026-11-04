@@ -24,7 +24,7 @@ import type { Product, Shop } from "@/lib/types";
 export default function Dashboard() {
   const { user, loading } = useAuth(), router = useRouter();
   const [shop, setShop] = useState<Shop | null>(null), [products, setProducts] = useState<Product[]>([]), [stats, setStats] = useState<StatMap>({});
-  const [tab, setTab] = useState<Tab>("Home"), [editing, setEditing] = useState<Product | undefined>(), [toast, setToast] = useState(""), [ready, setReady] = useState(false), [dataReady, setDataReady] = useState(false), [mode, setMode] = useState<"one" | "many">("one");
+  const [tab, setTab] = useState<Tab>("Home"), [editing, setEditing] = useState<Product | undefined>(), [toast, setToast] = useState(""), [ready, setReady] = useState(false), [dataReady, setDataReady] = useState(false), [back, setBack] = useState(""), [mode, setMode] = useState<"one" | "many">("one");
   const say = (t: string) => { setToast(t); setTimeout(() => setToast(""), 2600); };
   const load = useCallback(async (s: Shop) => {
     // products and numbers are fetched at the same time (faster than one after the other)
@@ -36,7 +36,17 @@ export default function Dashboard() {
   useEffect(() => { // links like /dashboard?tab=Profile open that tab directly
     const t = new URLSearchParams(window.location.search).get("tab");
     if (t === "Profile" || t === "Products" || t === "Form" || t === "Home") setTab(t);
+    const b = new URLSearchParams(window.location.search).get("back"); // only same-site paths such as /my-shop/p/abc
+    if (b && /^\/[a-z0-9-]+\/p\/[A-Za-z0-9]+$/.test(b)) setBack(b);
   }, []);
+  // /dashboard?tab=Form&edit=<productId> (from the "Edit this product" button on a product page) opens that product
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("edit");
+    if (!dataReady || !id) return;
+    const p = products.find((x) => x.id === id);
+    if (p) { setEditing(p); setTab("Form"); } else { setTab("Products"); setBack(""); }
+    window.history.replaceState(null, "", "/dashboard"); // run once
+  }, [dataReady]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!user) return;
     getMyShop(user.uid).then(async (s) => { if (!s) return router.replace("/sell"); setShop(s); setReady(true); await load(s); setDataReady(true); }).catch((e) => { say(errText(e)); setReady(true); setDataReady(true); }); // the page appears as soon as the shop is known; products fill in after
@@ -98,7 +108,7 @@ export default function Dashboard() {
             ? <QuickAdd shop={shop} uid={user.uid} onDone={async (m) => { await load(shop); setTab("Products"); say(m); window.scrollTo({ top: 0 }); }} />
             : <ProductForm key={editing?.id ?? "new"} shop={shop} uid={user.uid} product={editing} featuredCount={featuredCount}
                 categories={Array.from(new Set(products.map((p) => p.category)))}
-                onDone={async (m) => { await load(shop); setEditing(undefined); setTab("Products"); say(m); window.scrollTo({ top: 0 }); }} onCancel={() => goTab("Products")} />}
+                onDone={async (m) => { await load(shop); setEditing(undefined); if (back) return router.push(back); setTab("Products"); say(m); window.scrollTo({ top: 0 }); }} onCancel={() => (back ? router.push(back) : goTab("Products"))} />}
         </>
       )}
 
