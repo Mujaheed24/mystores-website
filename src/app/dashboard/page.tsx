@@ -83,7 +83,7 @@ export default function Dashboard() {
       <div className="dhead">
         <div><h1 style={{ fontSize: "clamp(32px,7vw,48px)", marginBottom: 10 }}>{shop.name}</h1><span className={`status ${shop.status}`}>{shop.status === "active" ? "Live" : shop.status === "pending" ? "Waiting for approval" : "Suspended"}</span></div>
         <div className="row">
-          {shop.status === "active" && <Link className="btn sm" href={`/${shop.slug}`}>👁 View my shop</Link>}
+          {shop.status === "active" && <Link className="btn sm" href={`/${shop.slug}`}> View my shop</Link>}
           {role === "owner" && <button type="button" className="btn alt sm" onClick={() => goTab("Profile")}>⚙ Shop settings</button>}
         </div>
       </div>
